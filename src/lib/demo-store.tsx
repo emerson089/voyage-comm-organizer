@@ -79,18 +79,16 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
       recordedBy?: string,
       reason?: string,
     ) => {
-      setEvents((prev) => [
-        ...prev,
-        {
-          id: `e${prev.length + 1}-${Date.now()}`,
-          passengerId,
-          state,
-          source,
-          recordedBy,
-          reason,
-          time: now(),
-        },
-      ]);
+      const event: PresenceEvent = {
+        id: `e${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        passengerId,
+        state,
+        source,
+        time: now(),
+      };
+      if (recordedBy !== undefined) event.recordedBy = recordedBy;
+      if (reason !== undefined) event.reason = reason;
+      setEvents((prev) => [...prev, event]);
       setPassengers((prev) =>
         prev.map((p) =>
           p.id === passengerId
