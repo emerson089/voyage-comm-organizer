@@ -123,29 +123,26 @@ Painel → saída atual, cidade, data, próxima atividade no fuso local, nº de 
 ## 13. Estratégia WhatsApp (futuro)
 Interface `sendMessage({ to, template, variables })`. MVP: `SimulatedProvider` grava em `message_deliveries` e gera link tokenizado (status `generated` → `opened` → `responded`). Depois: `WhatsAppCloudProvider` oficial com templates aprovados e credenciais em secrets, e rota `/api/public/webhooks/whatsapp` com verificação de assinatura, momento em que passam a existir `sent`, `delivered`, `read`. Sem Z-API/Evolution. Opt-in registrado em `departure_passengers` já no MVP.
 
-## 14. Fases e migrations
-1. **Base visual** (sem banco): tokens azul-marinho/branco/cinza/bordô, tipografia, AppShell, tela de login estática.
-2. **Migration 1 — identidade**: enums `app_role`; `organizations`, `profiles`, `user_roles`, funções `has_role`/`current_org_id`, trigger `updated_at`, RLS. + login e-mail/senha, gate `_authenticated`, convite de guia por admin, painel vazio por perfil, script SQL do primeiro admin.
-3. **Migration 2 — cadastros**: enums `departure_status`, `guide_role`; `trips`, `departures`, `departure_guides`, funções `is_guide_of_departure`/`is_lead_guide`, FKs compostas, RLS. + CRUD de viagens, saídas e designação de guias.
-4. **Migration 3 — passageiros**: `passengers`, `departure_passengers` (com campos de opt-in), RLS. + lista, cadastro manual, importação CSV e colar planilha.
-5. **Migration 4 — roteiro**: `meeting_points`, `itinerary_days`, `itinerary_items` (timezone IANA, timestamptz), triggers de integridade organizacional. + editor de roteiro e "Programação de hoje".
-6. **Migration 5 — avisos**: enums de aviso e destinatário; `announcements` (com `supersedes_announcement_id` e trigger de imutabilidade), `announcement_recipients` (token_hash/expires_at/revoked_at/used_at), `announcement_responses`, `message_deliveries`. + criar, pré-visualizar, publicar (lead), envio simulado, link público `/r/$token`, histórico, lembretes.
-7. **Migration 6 — presença**: `checkin_sessions`, `checkin_response_events`, `checkin_responses` + trigger de estado atual. + painel de presença, registro manual com motivo, lembrete a quem não respondeu, encerrar encontro.
-8. **Migration 7 — auditoria** e ajustes: `audit_logs`, gravação nas ações críticas, tela de auditoria, revisão pelo linter de segurança, polimento mobile e metadados.
-9. **Backlog pós-MVP**: ação "Duplicar saída e roteiro" (copia dias, atividades, orientações e pontos de encontro reutilizáveis; **não** copia passageiros, respostas, avisos publicados, presenças ou logs); integração oficial do WhatsApp.
+## 14. Fases e tabelas por migration
+1. **Fase 1 — protótipo visual (esta fase, sem banco)**: design tokens azul-marinho/branco/cinza claro/bordô, tipografia grande, AppShell mobile-first com navegação inferior, e telas clicáveis com dados simulados: login estático, painel do guia, programação de hoje, revisar programação, criar + pré-visualizar aviso, controle de presença, página pública de resposta e histórico de avisos. Demo: "Eurotrip — França, Bélgica, Holanda e Inglaterra", Amsterdã, encontro 09:00 no lobby do hotel, atividade "Passeio pelos canais", 18 passageiros (12 no ponto, 3 a caminho, 1 precisa de ajuda, 2 sem resposta). Interações simuladas: publicar aviso → prévia → confirmar publicação → "links gerados (envio simulado)"; lembrar pendentes; registrar situação manualmente ao tocar num passageiro; página pública alterna de "a caminho" para "no ponto"; "preciso de ajuda" em destaque; encerrar encontro com confirmação. **Sem migrations, sem auth real, sem tokens reais, sem WhatsApp.**
+2. **Migration 1 — identidade**: `organizations`, `profiles`, `user_roles` + enum `app_role`, funções `has_role`/`current_org_id`, trigger `updated_at`, RLS. + login e-mail/senha, gate `_authenticated`, convite de guia, script SQL do primeiro admin.
+3. **Migration 2 — cadastros**: `trips`, `departures`, `departure_guides` + enums `departure_status`/`guide_role`, funções `is_guide_of_departure`/`is_lead_guide`, chaves únicas compostas e FKs compostas, RLS. + CRUD de viagens, saídas e designação lead/assistant.
+4. **Migration 3 — passageiros**: `passengers`, `departure_passengers` (opt-in WhatsApp), RLS. + lista, cadastro manual, importação CSV e colar planilha.
+5. **Migration 4 — roteiro**: `meeting_points`, `itinerary_days`, `itinerary_items` (timezone IANA + timestamptz), triggers de integridade organizacional. + editor de roteiro e "Programação de hoje".
+6. **Migration 5 — avisos e tokens**: `announcements`, `announcement_recipients`, `announcement_responses`, `public_response_tokens`, `message_deliveries` + enums `announcement_type`/`announcement_status`/`token_purpose`/`token_status`, constraint de exclusividade do propósito, trigger de imutabilidade e de correção (supersede). + criar, pré-visualizar, publicar (lead), envio simulado, `/r/$token` para avisos, histórico e lembretes.
+7. **Migration 6 — presença**: `checkin_sessions`, `checkin_response_events`, `checkin_responses` + enum `checkin_state`, trigger de estado atual e trigger que revoga tokens ao encerrar a sessão. + painel de presença, registro manual com motivo, lembrete a pendentes, encerrar encontro, `/r/$token` para presença.
+8. **Migration 7 — auditoria**: `audit_logs` + gravação nas ações críticas (incluindo todas as ações do assistant), tela de auditoria, revisão pelo linter de segurança, polimento mobile e metadados.
+9. **Backlog pós-MVP**: "Duplicar saída e roteiro" (copia dias, atividades, orientações e pontos de encontro reutilizáveis; **não** copia passageiros, respostas, avisos publicados, presenças ou logs); integração oficial do WhatsApp; validade de link configurável por organização.
 
-## 15. Critérios de conclusão por fase
-Build sem erros; migração aplicada e linter de segurança revisado; admin, guia lead e guia assistant de teste executam o fluxo da fase ponta a ponta na preview; guia não vê dados de saída à qual não foi designado; auxiliar não consegue publicar aviso; tentativa de relacionar registros de organizações diferentes é rejeitada pelo banco; textos em pt-BR e telas usáveis em 375px.
+## 15. Critérios de conclusão
+**Fase 1**: todas as telas navegáveis; fluxo do guia compreensível sem explicação; nenhum botão principal sem resposta visual; nenhum texto cortado em 375px; Supabase intocado; build sem erros; resumo das telas e arquivos ao final.
+**Fases com banco**: migração aplicada e linter revisado; admin, lead e assistant executam o fluxo ponta a ponta; guia não vê saída à qual não foi designado; assistant não consegue publicar aviso nem alterar horário/ponto de encontro; relacionamento entre organizações diferentes é rejeitado pelo banco; token expirado, revogado ou de sessão encerrada não aceita resposta.
 
 ## 16. Riscos técnicos
 - Complexidade das RLS com dois papéis + níveis de guia — mitigado por funções security definer e testes de acesso cruzado.
-- FKs compostas exigem chaves únicas em todos os pais — modelar desde a primeira migration para evitar retrabalho.
-- Fusos por atividade: risco de exibir horário errado — armazenar `timestamptz` + timezone IANA e formatar sempre com o fuso da atividade.
-- Token por hash: link só é exibido uma vez; garantir cópia/reenvio gerando novo token e revogando o anterior.
+- FKs compostas exigem chaves únicas em todos os pais — modelar desde a primeira migration.
+- Fusos por atividade: armazenar `timestamptz` + timezone IANA e formatar sempre no fuso da atividade (inclui o cálculo de `expires_at`).
+- Token por hash: link só existe em claro no momento da geração; reenvio gera novo token e revoga o anterior.
+- Correção de aviso reenvia a todos: risco de excesso de mensagens — deixar claro na UI antes de confirmar.
 - Normalização de telefones e duplicatas na importação — validação e pré-visualização antes de gravar.
-- Divergência entre prévia e templates oficiais aprovados — modelar mensagem como template com variáveis desde já.
 
-## 17. Perguntas restantes (não bloqueiam a Fase 1)
-1. Prazo padrão de validade do link de resposta (ex. 24h ou até o fim da atividade)?
-2. Guia auxiliar pode abrir controle de presença ou apenas acompanhar um já aberto? (Plano atual: pode abrir.)
-3. Ao corrigir um aviso publicado, o novo aviso deve reenviar link a todos ou apenas a quem ainda não confirmou?
