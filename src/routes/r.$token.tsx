@@ -77,7 +77,7 @@ function PublicResponsePage() {
 
 function AvisoResponse() {
   const { confirmAnnouncement } = useDemoStore();
-  const aviso = DEMO_ANNOUNCEMENTS[0];
+  const aviso = DEMO_ANNOUNCEMENTS[0]!;
   const [done, setDone] = useState(false);
 
   function confirmar() {
