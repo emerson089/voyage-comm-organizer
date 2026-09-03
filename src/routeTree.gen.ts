@@ -10,33 +10,137 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AvisosRouteImport } from './routes/avisos'
+import { Route as HojeRouteImport } from './routes/hoje'
+import { Route as PainelRouteImport } from './routes/painel'
+import { Route as PresencaRouteImport } from './routes/presenca'
+import { Route as RoteiroRouteImport } from './routes/roteiro'
+import { Route as AvisosIndexRouteImport } from './routes/avisos.index'
+import { Route as AvisosNovoRouteImport } from './routes/avisos.novo'
+import { Route as RTokenRouteImport } from './routes/r.$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AvisosRoute = AvisosRouteImport.update({
+  id: '/avisos',
+  path: '/avisos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HojeRoute = HojeRouteImport.update({
+  id: '/hoje',
+  path: '/hoje',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PainelRoute = PainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PresencaRoute = PresencaRouteImport.update({
+  id: '/presenca',
+  path: '/presenca',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoteiroRoute = RoteiroRouteImport.update({
+  id: '/roteiro',
+  path: '/roteiro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AvisosIndexRoute = AvisosIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AvisosRoute,
+} as any)
+const AvisosNovoRoute = AvisosNovoRouteImport.update({
+  id: '/novo',
+  path: '/novo',
+  getParentRoute: () => AvisosRoute,
+} as any)
+const RTokenRoute = RTokenRouteImport.update({
+  id: '/r/$token',
+  path: '/r/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/avisos': typeof AvisosRouteWithChildren
+  '/hoje': typeof HojeRoute
+  '/painel': typeof PainelRoute
+  '/presenca': typeof PresencaRoute
+  '/roteiro': typeof RoteiroRoute
+  '/avisos/novo': typeof AvisosNovoRoute
+  '/r/$token': typeof RTokenRoute
+  '/avisos/': typeof AvisosIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/hoje': typeof HojeRoute
+  '/painel': typeof PainelRoute
+  '/presenca': typeof PresencaRoute
+  '/roteiro': typeof RoteiroRoute
+  '/avisos/novo': typeof AvisosNovoRoute
+  '/r/$token': typeof RTokenRoute
+  '/avisos': typeof AvisosIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/avisos': typeof AvisosRouteWithChildren
+  '/hoje': typeof HojeRoute
+  '/painel': typeof PainelRoute
+  '/presenca': typeof PresencaRoute
+  '/roteiro': typeof RoteiroRoute
+  '/avisos/novo': typeof AvisosNovoRoute
+  '/r/$token': typeof RTokenRoute
+  '/avisos/': typeof AvisosIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/avisos'
+    | '/hoje'
+    | '/painel'
+    | '/presenca'
+    | '/roteiro'
+    | '/avisos/novo'
+    | '/r/$token'
+    | '/avisos/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/hoje'
+    | '/painel'
+    | '/presenca'
+    | '/roteiro'
+    | '/avisos/novo'
+    | '/r/$token'
+    | '/avisos'
+  id:
+    | '__root__'
+    | '/'
+    | '/avisos'
+    | '/hoje'
+    | '/painel'
+    | '/presenca'
+    | '/roteiro'
+    | '/avisos/novo'
+    | '/r/$token'
+    | '/avisos/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AvisosRoute: typeof AvisosRouteWithChildren
+  HojeRoute: typeof HojeRoute
+  PainelRoute: typeof PainelRoute
+  PresencaRoute: typeof PresencaRoute
+  RoteiroRoute: typeof RoteiroRoute
+  RTokenRoute: typeof RTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +152,86 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/avisos': {
+      id: '/avisos'
+      path: '/avisos'
+      fullPath: '/avisos'
+      preLoaderRoute: typeof AvisosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hoje': {
+      id: '/hoje'
+      path: '/hoje'
+      fullPath: '/hoje'
+      preLoaderRoute: typeof HojeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/painel': {
+      id: '/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/presenca': {
+      id: '/presenca'
+      path: '/presenca'
+      fullPath: '/presenca'
+      preLoaderRoute: typeof PresencaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roteiro': {
+      id: '/roteiro'
+      path: '/roteiro'
+      fullPath: '/roteiro'
+      preLoaderRoute: typeof RoteiroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/avisos/': {
+      id: '/avisos/'
+      path: '/'
+      fullPath: '/avisos/'
+      preLoaderRoute: typeof AvisosIndexRouteImport
+      parentRoute: typeof AvisosRoute
+    }
+    '/avisos/novo': {
+      id: '/avisos/novo'
+      path: '/novo'
+      fullPath: '/avisos/novo'
+      preLoaderRoute: typeof AvisosNovoRouteImport
+      parentRoute: typeof AvisosRoute
+    }
+    '/r/$token': {
+      id: '/r/$token'
+      path: '/r/$token'
+      fullPath: '/r/$token'
+      preLoaderRoute: typeof RTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface AvisosRouteChildren {
+  AvisosNovoRoute: typeof AvisosNovoRoute
+  AvisosIndexRoute: typeof AvisosIndexRoute
+}
+
+const AvisosRouteChildren: AvisosRouteChildren = {
+  AvisosNovoRoute: AvisosNovoRoute,
+  AvisosIndexRoute: AvisosIndexRoute,
+}
+
+const AvisosRouteWithChildren =
+  AvisosRoute._addFileChildren(AvisosRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AvisosRoute: AvisosRouteWithChildren,
+  HojeRoute: HojeRoute,
+  PainelRoute: PainelRoute,
+  PresencaRoute: PresencaRoute,
+  RoteiroRoute: RoteiroRoute,
+  RTokenRoute: RTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
