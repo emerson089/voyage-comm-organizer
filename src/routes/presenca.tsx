@@ -255,8 +255,8 @@ function PresencaPage() {
                   {p.name.charAt(0)}
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-foreground">{p.name}</p>
-                  <p className="truncate text-xs text-muted-foreground">
+                  <p className="break-words text-sm font-semibold leading-tight text-foreground">{p.name}</p>
+                  <p className="break-words text-xs leading-snug text-muted-foreground">
                     {p.group} {p.lastEventTime ? `· última ${p.lastEventTime}` : ""}
                   </p>
                 </div>
