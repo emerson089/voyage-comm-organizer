@@ -106,6 +106,11 @@ Políticas separadas por operação, sempre `TO authenticated`:
 Públicas: `/` (login), `/r/$token` (resposta do passageiro), `/convite` (definir senha).
 Autenticadas: `/painel`, `/viagens`, `/viagens/$id`, `/saidas/$id`, `/saidas/$id/passageiros`, `/saidas/$id/roteiro`, `/saidas/$id/hoje`, `/saidas/$id/avisos`, `/saidas/$id/avisos/novo`, `/saidas/$id/presenca/$sessionId`, `/guias`, `/configuracoes`, `/auditoria`.
 
+`/r/$token` identifica o propósito do token:
+- `announcement`: mostra o aviso e oferece "Li e entendi".
+- `checkin`: mostra horário e local do encontro e oferece "Estou a caminho", "Já estou no ponto" e "Preciso de ajuda", permitindo atualizar de "a caminho" para "no ponto"; se a sessão foi encerrada, exibe aviso de encerramento e bloqueia respostas.
+
+
 ## 10. Componentes principais
 `AppShell` mobile-first com navegação inferior; `CartaoProgramacaoHoje`; `ProximaAtividade` (com fuso da atividade); `EditorAviso` + `PreviaMensagem` (template com variáveis); `ListaDestinatarios` com filtro "sem resposta"; `PainelPresenca` (contadores no ponto / a caminho / precisa ajuda / sem resposta + histórico por passageiro); `RegistrarRespostaManual` (motivo opcional); `ImportadorPassageiros` (CSV + colar planilha, validação E.164, pré-visualização); `BadgeStatusResposta`; `TabelaAuditoria`.
 
