@@ -75,12 +75,18 @@ function NovoAvisoPage() {
   }
 
   function confirmarPublicacao() {
-    const res = publishAnnouncement({
+    const payload: {
+      title: string;
+      body: string;
+      type: AnnouncementType;
+      linkedActivity?: string;
+    } = {
       title: title.trim(),
       body: body.trim(),
       type,
-      linkedActivity,
-    });
+    };
+    if (linkedActivity !== undefined) payload.linkedActivity = linkedActivity;
+    const res = publishAnnouncement(payload);
     setPublished({ total: res.total });
     setStep("confirmado");
     toast.success("Aviso publicado", {
