@@ -65,9 +65,9 @@ Regras gerais: `created_at`/`updated_at` com trigger; `GRANT` explícito para `a
 - Validações temporais (ex. `expires_at > now()`) por trigger, nunca CHECK.
 
 ### Regras de negócio nas escritas
-- Aviso `draft` é editável; aviso `published` é imutável (trigger bloqueia UPDATE de título/corpo/tipo). Correção cria novo aviso com `supersedes_announcement_id` e marca o anterior como `superseded`.
-- Publicar aviso: apenas admin ou guia **lead** da saída.
-- Auxiliar: leitura, criar/editar rascunhos, abrir e acompanhar presença, registrar respostas manuais.
+- Aviso `draft` é editável; aviso `published` é imutável (trigger bloqueia UPDATE de título/corpo/tipo). **Correção de aviso publicado**: cria novo aviso com `supersedes_announcement_id`, marca o anterior como `superseded`, gera **novos destinatários e novos tokens para todos os passageiros**, exige nova confirmação de todos e preserva integralmente o histórico anterior.
+- Publicar aviso e publicar correção: apenas admin ou guia **lead** da saída.
+- Guia **assistant** pode: abrir controle de presença, acompanhar respostas, registrar respostas manualmente, enviar lembrete a quem não respondeu e encerrar a sessão — todas com registro em `audit_logs`. Não pode publicar aviso oficial, publicar correção, alterar horário do roteiro nem alterar ponto de encontro.
 
 ## 7. Relacionamentos
 ```text
@@ -80,7 +80,9 @@ departures 1─n announcements ─0..1 itinerary_items
 announcements 0..1─1 announcements               (supersedes_announcement_id)
 announcements 1─n announcement_recipients ─1 departure_passengers
 announcement_recipients 1─n announcement_responses
-announcement_recipients 1─n message_deliveries
+departure_passengers 1─n public_response_tokens ─0..1 announcements
+                                               ─0..1 checkin_sessions
+public_response_tokens 1─n message_deliveries
 departures 1─n checkin_sessions ─0..1 itinerary_items / meeting_points
 checkin_sessions 1─n checkin_response_events ─1 departure_passengers
 checkin_sessions 1─n checkin_responses (estado atual, 1 por passageiro)
