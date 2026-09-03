@@ -98,7 +98,7 @@ function NovoAvisoPage() {
     setTitle("");
     setBody("");
     setType("information");
-    setActivity(ACTIVITIES[2]);
+    setActivity("Passeio pelos canais");
     setPublished(null);
     setStep("editor");
   }
