@@ -170,7 +170,7 @@ function PresencaPage() {
       </div>
 
       {/* Filtros */}
-      <div className="no-scrollbar mb-3 flex gap-2 overflow-x-auto pb-1">
+      <div className="mb-3 flex flex-wrap gap-2 pb-1">
         {FILTERS.map((f) => (
           <button
             key={f}
