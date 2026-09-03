@@ -24,7 +24,7 @@ export const Route = createFileRoute("/")({
 function LoginPage() {
   const { signIn, ready } = useDemoStore();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("marina@wtt.com.br");
+  const [email, setEmail] = useState("renato@wtt.com.br");
   const [password, setPassword] = useState("••••••••");
 
   function handleSubmit(e: React.FormEvent) {
