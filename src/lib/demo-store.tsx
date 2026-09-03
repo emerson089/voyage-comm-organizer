@@ -146,7 +146,7 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
 
   const publishAnnouncement = useCallback<DemoStoreValue["publishAnnouncement"]>(
     (draft) => {
-      const id = `a${announcements.length + 1}-${Date.now()}`;
+      const id = `a${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
       const next: Announcement = {
         id,
         title: draft.title,
@@ -157,8 +157,8 @@ export function DemoStoreProvider({ children }: { children: ReactNode }) {
         total: passengers.length,
         confirmed: 0,
         pending: passengers.length,
-        linkedActivity: draft.linkedActivity,
       };
+      if (draft.linkedActivity !== undefined) next.linkedActivity = draft.linkedActivity;
       setAnnouncements((prev) => [next, ...prev]);
       return { total: passengers.length, status: "envio_simulado" };
     },
