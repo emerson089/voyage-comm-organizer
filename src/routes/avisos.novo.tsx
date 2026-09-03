@@ -57,7 +57,7 @@ function NovoAvisoPage() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [type, setType] = useState<AnnouncementType>("information");
-  const [activity, setActivity] = useState<string>(ACTIVITIES[2]);
+  const [activity, setActivity] = useState<string>("Passeio pelos canais");
   const [published, setPublished] = useState<{ total: number } | null>(null);
 
   const linkedActivity = activity !== ACTIVITIES[0] ? activity : undefined;
