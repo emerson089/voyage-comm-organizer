@@ -27,7 +27,7 @@ Sem rota pública de setup. O usuário é criado manualmente no Supabase Auth (D
 Depois disso, novos usuários entram pelo fluxo de convite do próprio sistema.
 
 ## 6. Modelo de dados (revisado)
-Enums: `app_role` (admin, guide), `departure_status`, `guide_role` (**lead, assistant**), `announcement_type` (**information, reminder, schedule_change, important**), `announcement_status` (draft, published, superseded), `recipient_status` (**generated, opened, responded, expired, revoked**), `announcement_response_type` (li_entendi), `checkin_state` (a_caminho, no_ponto, preciso_ajuda, sem_resposta), `response_source` (public_link, manual).
+Enums: `app_role` (admin, guide), `departure_status`, `guide_role` (**lead, assistant**), `announcement_type` (**information, reminder, schedule_change, important**), `announcement_status` (draft, published, superseded), `token_purpose` (**announcement, checkin**), `token_status` (**generated, opened, responded, expired, revoked**), `announcement_response_type` (li_entendi), `checkin_state` (**a_caminho, no_ponto, preciso_ajuda** — `sem_resposta` NÃO é evento), `response_source` (public_link, manual).
 
 - `organizations` — nome, timezone padrão apenas para exibição administrativa.
 - `profiles` — id = auth.users.id, organization_id, nome, telefone, ativo.
@@ -41,13 +41,20 @@ Enums: `app_role` (admin, guide), `departure_status`, `guide_role` (**lead, assi
 - `itinerary_days` — organization_id, departure_id, day_date, cidade, país, **timezone IANA**, resumo.
 - `itinerary_items` — organization_id, itinerary_day_id, título, descrição, orientações, meeting_point_id (NULL ok), **starts_at timestamptz**, **timezone IANA** (herda do dia quando nulo), ordem.
 - `announcements` — organization_id, departure_id, **itinerary_item_id NULL**, **announcement_type**, título, corpo, status (draft/published/superseded), **supersedes_announcement_id** (correção de aviso publicado), created_by, published_by, published_at.
-- `announcement_recipients` — announcement_id, departure_passenger_id, organization_id, **token_hash**, **expires_at**, **revoked_at**, **used_at**, **status (generated/opened/responded/expired/revoked)**, reminder_count, last_reminder_at. Token em claro só é devolvido no momento da geração (link) e nunca persistido.
+- `public_response_tokens` — **infraestrutura comum de tokens**: id, organization_id, departure_passenger_id, `purpose` (announcement | checkin), announcement_id NULL, checkin_session_id NULL, `token_hash`, `expires_at`, `revoked_at`, `first_opened_at`, `last_opened_at`, `status`, created_at. Constraint garantindo exclusividade: purpose `announcement` exige announcement_id e proíbe checkin_session_id; purpose `checkin` exige checkin_session_id e proíbe announcement_id; nunca os dois. Token aleatório criptográfico, armazenado só como hash, nunca exposto em listas do painel.
+- `announcement_recipients` — announcement_id, departure_passenger_id, organization_id, status derivado do token/resposta, reminder_count, last_reminder_at. Sem token próprio (fica em `public_response_tokens`).
 - `announcement_responses` — **confirmação de aviso**: recipient_id, tipo, source (public_link/manual), recorded_by (quando manual), reason, created_at.
-- `checkin_sessions` — organization_id, departure_id, **itinerary_item_id NULL**, meeting_point_id (NULL ok), scheduled_at timestamptz, **timezone IANA**, opened_by, opened_at, closed_at.
-- `checkin_response_events` — **histórico** completo: session_id, departure_passenger_id, state, source, recorded_by, reason, created_at.
-- `checkin_responses` — **estado atual** por (session_id, departure_passenger_id): state, last_event_id, last_response_at (mantido por trigger a partir dos eventos).
-- `message_deliveries` — log da camada de envio: provider (simulated), payload renderizado, recipient_id, resultado, created_at.
+- `checkin_sessions` — organization_id, departure_id, **itinerary_item_id NULL**, meeting_point_id (NULL ok), scheduled_at timestamptz, **timezone IANA**, opened_by, opened_at, closed_at, closed_by.
+- `checkin_response_events` — **histórico**: session_id, departure_passenger_id, state (a_caminho | no_ponto | preciso_ajuda), source, recorded_by, reason, created_at.
+- `checkin_responses` — **estado atual** por (session_id, departure_passenger_id): state, last_event_id, last_response_at (mantido por trigger). Passageiro sem nenhum evento = **sem resposta** (estado calculado/inicial, nunca gravado como evento).
+- `message_deliveries` — log da camada de envio: provider (simulated), payload renderizado, token_id/recipient_id, resultado, created_at.
 - `audit_logs` — organization_id, actor_id, ação, entidade, entity_id, dados antes/depois, created_at.
+
+### Validade dos tokens
+- Aviso vinculado a atividade: `expires_at = starts_at + 2 horas`, calculado no fuso IANA da atividade.
+- Aviso livre: 24 horas por padrão, com coluna/config de validade para permitir ajuste futuro.
+- Presença: válido **somente enquanto a sessão está aberta**. Ao encerrar (`closed_at`), trigger revoga os tokens da sessão e novas respostas são rejeitadas imediatamente; a página pública informa que o controle foi encerrado.
+- Token deixa de funcionar quando revogado, expirado ou com sessão encerrada. Purpose `checkin` aceita múltiplas respostas dentro da validade (permite atualizar de "a caminho" para "no ponto"); purpose `announcement` aceita a confirmação e registra `responded`.
 
 Regras gerais: `created_at`/`updated_at` com trigger; `GRANT` explícito para `authenticated` e `service_role` em toda tabela; nenhuma policy `anon` — a rota pública de resposta passa por server function com cliente admin após validar hash do token.
 
