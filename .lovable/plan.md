@@ -7,108 +7,131 @@ Central operacional para guias de viagens internacionais em grupo. Não substitu
 Informação operacional dispersa no WhatsApp. O guia não sabe, de forma confiável e rápida, quem leu o aviso e quem já está no ponto de encontro.
 
 ## 3. Análise do Supabase conectado
-Inspeção realizada agora no projeto conectado (ref hhrdhapypoihvzurynia):
-- Schema `public`: **0 tabelas**.
-- `auth.users`: **0 usuários**.
-- Nenhuma função, trigger ou bucket de storage.
+Inspeção feita no projeto conectado (ref hhrdhapypoihvzurynia):
+- Schema `public`: **0 tabelas**; `auth.users`: **0 usuários**; nenhuma função, trigger ou bucket.
 
-Conclusão: banco vazio. Nada será excluído ou renomeado; todo o schema é novo. Decisão confirmada: operação de uma única agência (WTT), mas com `organization_id` presente desde o início para permitir multi-agência no futuro sem migração destrutiva.
+Banco vazio: nada será excluído ou renomeado. Uma agência (WTT), mas com `organization_id` em todas as tabelas de negócio desde o início.
 
 ## 4. Arquitetura proposta
 - TanStack Start (React 19) + Tailwind v4 + shadcn/ui, pt-BR, mobile-first.
-- Leitura/escrita autenticada via `createServerFn` com middleware Supabase (RLS como o usuário logado). Sem chaves no frontend.
-- Ações privilegiadas (convite de guia, importação em massa, envio simulado) em server functions que verificam papel antes de usar cliente admin.
-- Respostas dos passageiros: rota pública `/r/{token}` (token opaco por destinatário) + registro manual pelo guia no painel.
-- Camada `whatsapp` isolada com interface `sendTemplateMessage()`; no MVP há apenas o provider `simulado` que grava log. Troca futura pela WhatsApp Business Platform oficial sem tocar na UI.
+- Toda leitura/escrita autenticada por `createServerFn` + middleware Supabase (RLS como o usuário). Nenhuma chave no frontend.
+- Ações privilegiadas (convite de guia, importação em massa, geração de tokens, envio simulado) em server functions que verificam papel antes de usar o cliente admin.
+- Respostas do passageiro: rota pública `/r/$token` validada por **hash** do token + registro manual pelo guia.
+- Camada `whatsapp` isolada: interface `sendTemplateMessage()` com provider `simulado` no MVP; provider oficial (WhatsApp Business Platform) depois, sem tocar na UI.
 
-## 5. Modelo de dados sugerido
-- `organizations` — nome, timezone, config básica.
-- `profiles` — 1:1 com `auth.users`: nome, telefone, organization_id.
-- `user_roles` (+ enum `app_role`: admin, guide) — papéis em tabela separada, lidos por função `has_role` security definer.
-- `trips` — viagem/produto: nome, destino, descrição.
-- `departures` — saída da viagem: datas início/fim, código, status (planejada, em andamento, concluída).
-- `departure_guides` — guias designados a uma saída.
-- `passengers` — pessoa: nome, telefone (E.164), e-mail, observações.
-- `departure_passengers` — vínculo passageiro↔saída (status, quarto/grupo).
-- `meeting_points` — pontos de encontro por saída: nome, endereço, referência, lat/long opcional.
-- `itinerary_days` — dia da saída: data, cidade, resumo.
-- `itinerary_items` — atividades do dia: horário, título, descrição, orientações, meeting_point_id.
-- `announcements` — aviso: saída, dia/atividade relacionada, título, corpo, status (rascunho/publicado), publicado_por, publicado_em.
-- `announcement_recipients` — um registro por passageiro: token público, status de envio, enviado_em, lembretes enviados.
-- `passenger_responses` — resposta ligada ao destinatário ou à sessão de presença: tipo (li_entendi, a_caminho, no_ponto, preciso_ajuda), origem (link_publico/manual), criado_em.
-- `checkin_sessions` — controle de presença: atividade/ponto, horário previsto, aberta/encerrada.
-- `checkin_responses` — estado atual por passageiro na sessão + horário da última resposta.
-- `message_deliveries` — log da camada de envio (payload renderizado, provider, resultado) para auditoria e futura troca por WhatsApp real.
-- `audit_logs` — ator, ação, entidade, id, dados antes/depois, timestamp.
+## 5. Primeiro administrador
+Sem rota pública de setup. O usuário é criado manualmente no Supabase Auth (Dashboard) e o plano entrega um script SQL idempotente, para rodar no SQL Editor, que:
+1. Garante a organização WTT (`insert ... on conflict do nothing`).
+2. Cria/atualiza o `profile` a partir do e-mail (`select id from auth.users where email = '...'`), falhando com mensagem clara se o usuário não existir.
+3. Insere o papel `admin` em `user_roles` (`on conflict do nothing`).
+Depois disso, novos usuários entram pelo fluxo de convite do próprio sistema.
 
-Todas as tabelas com `organization_id`, `created_at`, `updated_at` (trigger de atualização), `GRANT` explícito para `authenticated`/`service_role` (e `anon` apenas nas leituras estritamente públicas do link de resposta, feitas por função em vez de acesso direto às tabelas).
+## 6. Modelo de dados (revisado)
+Enums: `app_role` (admin, guide), `departure_status`, `guide_role` (**lead, assistant**), `announcement_type` (**information, reminder, schedule_change, important**), `announcement_status` (draft, published, superseded), `recipient_status` (**generated, opened, responded, expired, revoked**), `announcement_response_type` (li_entendi), `checkin_state` (a_caminho, no_ponto, preciso_ajuda, sem_resposta), `response_source` (public_link, manual).
 
-## 6. Relacionamentos
+- `organizations` — nome, timezone padrão apenas para exibição administrativa.
+- `profiles` — id = auth.users.id, organization_id, nome, telefone, ativo.
+- `user_roles` — (user_id, role) único; lido por `has_role` security definer.
+- `trips` — organization_id, nome, destino, descrição.
+- `departures` — organization_id, trip_id, código, data início/fim, status.
+- `departure_guides` — departure_id, profile_id, **guide_role (lead/assistant)**, organization_id; único por (departure_id, profile_id).
+- `passengers` — organization_id, nome, telefone E.164, e-mail, notas.
+- `departure_passengers` — departure_id, passenger_id, organization_id, status, grupo/quarto, **whatsapp_opt_in_at, whatsapp_opt_in_source, whatsapp_opt_out_at**.
+- `meeting_points` — organization_id, departure_id (ou reutilizável por trip), nome, endereço, referência, lat/long, **timezone IANA**.
+- `itinerary_days` — organization_id, departure_id, day_date, cidade, país, **timezone IANA**, resumo.
+- `itinerary_items` — organization_id, itinerary_day_id, título, descrição, orientações, meeting_point_id (NULL ok), **starts_at timestamptz**, **timezone IANA** (herda do dia quando nulo), ordem.
+- `announcements` — organization_id, departure_id, **itinerary_item_id NULL**, **announcement_type**, título, corpo, status (draft/published/superseded), **supersedes_announcement_id** (correção de aviso publicado), created_by, published_by, published_at.
+- `announcement_recipients` — announcement_id, departure_passenger_id, organization_id, **token_hash**, **expires_at**, **revoked_at**, **used_at**, **status (generated/opened/responded/expired/revoked)**, reminder_count, last_reminder_at. Token em claro só é devolvido no momento da geração (link) e nunca persistido.
+- `announcement_responses` — **confirmação de aviso**: recipient_id, tipo, source (public_link/manual), recorded_by (quando manual), reason, created_at.
+- `checkin_sessions` — organization_id, departure_id, **itinerary_item_id NULL**, meeting_point_id (NULL ok), scheduled_at timestamptz, **timezone IANA**, opened_by, opened_at, closed_at.
+- `checkin_response_events` — **histórico** completo: session_id, departure_passenger_id, state, source, recorded_by, reason, created_at.
+- `checkin_responses` — **estado atual** por (session_id, departure_passenger_id): state, last_event_id, last_response_at (mantido por trigger a partir dos eventos).
+- `message_deliveries` — log da camada de envio: provider (simulated), payload renderizado, recipient_id, resultado, created_at.
+- `audit_logs` — organization_id, actor_id, ação, entidade, entity_id, dados antes/depois, created_at.
+
+Regras gerais: `created_at`/`updated_at` com trigger; `GRANT` explícito para `authenticated` e `service_role` em toda tabela; nenhuma policy `anon` — a rota pública de resposta passa por server function com cliente admin após validar hash do token.
+
+### Integridade entre organizações
+- `organization_id NOT NULL` em toda tabela de negócio.
+- Chaves únicas compostas nos pais, ex. `unique (id, organization_id)`, e **foreign keys compostas** nos filhos (`(departure_id, organization_id) references departures(id, organization_id)`), impedindo por constraint qualquer relacionamento cruzando organizações.
+- Onde a FK composta não é possível (relação indireta, ex. `itinerary_items` → `meeting_points`), trigger `before insert/update` validando a mesma organização.
+- Validações temporais (ex. `expires_at > now()`) por trigger, nunca CHECK.
+
+### Regras de negócio nas escritas
+- Aviso `draft` é editável; aviso `published` é imutável (trigger bloqueia UPDATE de título/corpo/tipo). Correção cria novo aviso com `supersedes_announcement_id` e marca o anterior como `superseded`.
+- Publicar aviso: apenas admin ou guia **lead** da saída.
+- Auxiliar: leitura, criar/editar rascunhos, abrir e acompanhar presença, registrar respostas manuais.
+
+## 7. Relacionamentos
 ```text
 organizations 1─n trips 1─n departures
-departures 1─n departure_guides ─1 profiles
+departures 1─n departure_guides ─1 profiles      (guide_role: lead | assistant)
 departures 1─n departure_passengers ─1 passengers
 departures 1─n meeting_points
-departures 1─n itinerary_days 1─n itinerary_items ─1 meeting_points
-departures 1─n announcements 1─n announcement_recipients ─1 departure_passengers
-announcement_recipients 1─n passenger_responses
-departures 1─n checkin_sessions 1─n checkin_responses ─1 departure_passengers
+departures 1─n itinerary_days 1─n itinerary_items ─0..1 meeting_points
+departures 1─n announcements ─0..1 itinerary_items
+announcements 0..1─1 announcements               (supersedes_announcement_id)
+announcements 1─n announcement_recipients ─1 departure_passengers
+announcement_recipients 1─n announcement_responses
+announcement_recipients 1─n message_deliveries
+departures 1─n checkin_sessions ─0..1 itinerary_items / meeting_points
+checkin_sessions 1─n checkin_response_events ─1 departure_passengers
+checkin_sessions 1─n checkin_responses (estado atual, 1 por passageiro)
 ```
 
-## 7. Perfis e permissões
-- Admin: tudo dentro da organização (viagens, saídas, guias, passageiros, roteiros, avisos, presença, configurações).
-- Guia: apenas saídas onde está em `departure_guides` — revisar roteiro, publicar aviso, abrir/encerrar presença, ver respostas, enviar lembrete. Sem acesso a configurações da agência nem a outras saídas.
-- Passageiro: sem login. Identificado por saída + telefone; responde por link tokenizado.
+## 8. Perfis, permissões e RLS
+Funções security definer: `has_role(uid, role)`, `current_org_id()`, `is_guide_of_departure(uid, departure_id)`, `is_lead_guide(uid, departure_id)`.
 
-## 8. Políticas RLS
-- Funções security definer: `has_role(uid, role)`, `current_org_id()`, `is_guide_of_departure(uid, departure_id)`.
-- Para cada tabela, políticas separadas de SELECT/INSERT/UPDATE/DELETE `TO authenticated`.
-- Admin: `organization_id = current_org_id() AND has_role(auth.uid(),'admin')`.
-- Guia: leitura/escrita restritas por `is_guide_of_departure`; sem DELETE em cadastros; escrita permitida em avisos, presença e respostas manuais das suas saídas.
-- `profiles`: cada um lê/edita o próprio; admin lê todos da org.
-- `user_roles`: leitura para autenticados; escrita só admin (via server function).
-- Resposta pública por token: nenhuma policy `anon` ampla — validação do token e gravação acontecem em server function/rota pública com verificação do token.
-- `audit_logs` e `message_deliveries`: leitura admin; escrita apenas server-side.
+Políticas separadas por operação, sempre `TO authenticated`:
+- **Admin** (`has_role(auth.uid(),'admin') and organization_id = current_org_id()`): SELECT/INSERT/UPDATE/DELETE em todas as tabelas de negócio.
+- **Guia (lead e assistant)**: SELECT em `trips`/`departures`/`departure_passengers`/`passengers` (via saída)/`meeting_points`/`itinerary_*`/`announcements`/`announcement_recipients`/`announcement_responses`/`checkin_*` restrito por `is_guide_of_departure`. Sem DELETE em cadastros.
+- **Guia lead**: INSERT/UPDATE em `announcements` (incluindo publicar) e `itinerary_items` da sua saída; UPDATE de `announcements` só enquanto `draft` (imutabilidade garantida por trigger).
+- **Guia assistant**: INSERT/UPDATE de `announcements` apenas com `status = 'draft'`; INSERT em `checkin_sessions`, `checkin_response_events` e `announcement_responses` (source manual) da sua saída.
+- `profiles`: cada um lê/atualiza o próprio; admin lê/edita todos da org.
+- `user_roles`: SELECT para autenticados da org; escrita apenas por server function admin.
+- `announcement_recipients.token_hash`: nunca projetado para o cliente — leituras do painel usam view/colunas seguras.
+- `audit_logs`, `message_deliveries`: SELECT admin; INSERT apenas server-side.
+- Passageiro (`anon`): **sem policy alguma**. `/r/$token` resolve via server function que confere hash, validade, revogação e grava a resposta.
 
 ## 9. Rotas e telas
-Públicas: `/` (login/entrada), `/r/$token` (resposta do passageiro), `/convite` (definição de senha).
-Autenticadas (`_authenticated/`): `/painel` (dashboard por perfil), `/viagens`, `/viagens/$id`, `/saidas/$id` (visão geral), `/saidas/$id/passageiros`, `/saidas/$id/roteiro`, `/saidas/$id/hoje`, `/saidas/$id/avisos` (histórico), `/saidas/$id/avisos/novo` (criar + pré-visualizar), `/saidas/$id/presenca/$sessionId`, `/guias`, `/configuracoes`.
+Públicas: `/` (login), `/r/$token` (resposta do passageiro), `/convite` (definir senha).
+Autenticadas: `/painel`, `/viagens`, `/viagens/$id`, `/saidas/$id`, `/saidas/$id/passageiros`, `/saidas/$id/roteiro`, `/saidas/$id/hoje`, `/saidas/$id/avisos`, `/saidas/$id/avisos/novo`, `/saidas/$id/presenca/$sessionId`, `/guias`, `/configuracoes`, `/auditoria`.
 
 ## 10. Componentes principais
-`AppShell` mobile-first com navegação inferior; `CartaoProgramacaoHoje`; `ProximaAtividade`; `EditorAviso` + `PreviaMensagem` (renderiza o template como bolha de WhatsApp); `ListaDestinatarios` com filtro "sem resposta"; `PainelPresenca` com contadores (no ponto / a caminho / precisa ajuda / sem resposta); `ImportadorPassageiros` (CSV + colar planilha, com pré-visualização e validação de telefone); `BadgeStatusResposta`; `TabelaAuditoria`.
+`AppShell` mobile-first com navegação inferior; `CartaoProgramacaoHoje`; `ProximaAtividade` (com fuso da atividade); `EditorAviso` + `PreviaMensagem` (template com variáveis); `ListaDestinatarios` com filtro "sem resposta"; `PainelPresenca` (contadores no ponto / a caminho / precisa ajuda / sem resposta + histórico por passageiro); `RegistrarRespostaManual` (motivo opcional); `ImportadorPassageiros` (CSV + colar planilha, validação E.164, pré-visualização); `BadgeStatusResposta`; `TabelaAuditoria`.
 
 ## 11. Fluxos do administrador
-Criar viagem → criar saída → cadastrar guias e designar → importar passageiros (CSV ou colar) → montar roteiro por dia com atividades e pontos de encontro → acompanhar avisos e presença de todas as saídas.
+Criar viagem → criar saída → cadastrar guias e designar como lead/assistant → importar passageiros e registrar opt-in → montar roteiro por dia com cidade, fuso e pontos de encontro → acompanhar avisos, presença e auditoria de todas as saídas.
 
 ## 12. Fluxos do guia
-Abrir painel → ver saída atual, cidade, data, próxima atividade/horário/local, nº de passageiros, último aviso, pendentes → "Revisar programação" → "Publicar aviso" (pré-visualiza, publica, envio simulado gera link por passageiro) → "Abrir controle de presença" → acompanhar respostas em tempo real → "Lembrar quem não respondeu" → "Encerrar encontro".
+Painel → saída atual, cidade, data, próxima atividade no fuso local, nº de passageiros, último aviso, pendentes → "Revisar programação" → "Publicar aviso" (lead; prévia, publicação, geração de links por passageiro) → "Abrir controle de presença" → acompanhar respostas → "Lembrar quem não respondeu" → "Encerrar encontro". Correção de aviso publicado = novo aviso vinculado ao anterior.
 
 ## 13. Estratégia WhatsApp (futuro)
-Interface única no servidor: `sendMessage({ to, template, variables })`. Providers: `SimulatedProvider` (MVP: grava em `message_deliveries` e gera link de resposta) e, depois, `WhatsAppCloudProvider` (WhatsApp Business Platform oficial, templates aprovados, credenciais em secrets). Rota `/api/public/webhooks/whatsapp` já prevista com verificação de assinatura para receber respostas reais. Sem Z-API/Evolution.
+Interface `sendMessage({ to, template, variables })`. MVP: `SimulatedProvider` grava em `message_deliveries` e gera link tokenizado (status `generated` → `opened` → `responded`). Depois: `WhatsAppCloudProvider` oficial com templates aprovados e credenciais em secrets, e rota `/api/public/webhooks/whatsapp` com verificação de assinatura, momento em que passam a existir `sent`, `delivered`, `read`. Sem Z-API/Evolution. Opt-in registrado em `departure_passengers` já no MVP.
 
-## 14. Fases do desenvolvimento
-1. **Base visual + design system**: tokens azul-marinho/branco/cinza/bordô, tipografia, AppShell, tela de login (sem backend).
-2. **Migração 1 + auth**: organizations, profiles, user_roles, funções e RLS; login e-mail/senha, convite de guia pelo admin, gate `_authenticated`, dashboard vazio por perfil.
-3. **Migração 2 + cadastros**: trips, departures, departure_guides; CRUD admin de viagens/saídas/guias.
-4. **Migração 3 + passageiros**: passengers, departure_passengers; lista, cadastro manual e importação (CSV + colar).
-5. **Migração 4 + roteiro**: meeting_points, itinerary_days, itinerary_items; editor de roteiro e tela "Programação de hoje".
-6. **Migração 5 + avisos**: announcements, announcement_recipients, message_deliveries, passenger_responses; criar, pré-visualizar, publicar, envio simulado, link público de resposta, histórico, lembretes.
-7. **Migração 6 + presença**: checkin_sessions, checkin_responses; painel de presença com contadores, registro manual, lembrete e encerramento.
-8. **Auditoria e ajustes**: audit_logs nas ações críticas, tela de auditoria, revisão de RLS com o linter, polimento mobile e SEO/metadados.
+## 14. Fases e migrations
+1. **Base visual** (sem banco): tokens azul-marinho/branco/cinza/bordô, tipografia, AppShell, tela de login estática.
+2. **Migration 1 — identidade**: enums `app_role`; `organizations`, `profiles`, `user_roles`, funções `has_role`/`current_org_id`, trigger `updated_at`, RLS. + login e-mail/senha, gate `_authenticated`, convite de guia por admin, painel vazio por perfil, script SQL do primeiro admin.
+3. **Migration 2 — cadastros**: enums `departure_status`, `guide_role`; `trips`, `departures`, `departure_guides`, funções `is_guide_of_departure`/`is_lead_guide`, FKs compostas, RLS. + CRUD de viagens, saídas e designação de guias.
+4. **Migration 3 — passageiros**: `passengers`, `departure_passengers` (com campos de opt-in), RLS. + lista, cadastro manual, importação CSV e colar planilha.
+5. **Migration 4 — roteiro**: `meeting_points`, `itinerary_days`, `itinerary_items` (timezone IANA, timestamptz), triggers de integridade organizacional. + editor de roteiro e "Programação de hoje".
+6. **Migration 5 — avisos**: enums de aviso e destinatário; `announcements` (com `supersedes_announcement_id` e trigger de imutabilidade), `announcement_recipients` (token_hash/expires_at/revoked_at/used_at), `announcement_responses`, `message_deliveries`. + criar, pré-visualizar, publicar (lead), envio simulado, link público `/r/$token`, histórico, lembretes.
+7. **Migration 6 — presença**: `checkin_sessions`, `checkin_response_events`, `checkin_responses` + trigger de estado atual. + painel de presença, registro manual com motivo, lembrete a quem não respondeu, encerrar encontro.
+8. **Migration 7 — auditoria** e ajustes: `audit_logs`, gravação nas ações críticas, tela de auditoria, revisão pelo linter de segurança, polimento mobile e metadados.
+9. **Backlog pós-MVP**: ação "Duplicar saída e roteiro" (copia dias, atividades, orientações e pontos de encontro reutilizáveis; **não** copia passageiros, respostas, avisos publicados, presenças ou logs); integração oficial do WhatsApp.
 
 ## 15. Critérios de conclusão por fase
-Cada fase só termina quando: build sem erros; migração aplicada e linter de segurança revisado; um admin e um guia de teste conseguem executar o fluxo da fase ponta a ponta na preview; guia não consegue ver dados de saída à qual não foi designado (testado); textos em pt-BR e telas usáveis em 375px de largura.
+Build sem erros; migração aplicada e linter de segurança revisado; admin, guia lead e guia assistant de teste executam o fluxo da fase ponta a ponta na preview; guia não vê dados de saída à qual não foi designado; auxiliar não consegue publicar aviso; tentativa de relacionar registros de organizações diferentes é rejeitada pelo banco; textos em pt-BR e telas usáveis em 375px.
 
 ## 16. Riscos técnicos
-- Complexidade das políticas RLS com dois perfis e escopo por saída — mitigar com funções security definer e testes de acesso cruzado.
-- Normalização de telefones na importação (E.164, duplicatas) — validação e pré-visualização antes de gravar.
-- Link público de resposta: risco de enumeração — tokens longos aleatórios, sem dados sensíveis na página, rate limiting simples.
-- Divergência entre a prévia simulada e os templates aprovados do WhatsApp — modelar mensagem já como template com variáveis.
-- Fuso horário nas viagens internacionais — armazenar em UTC, exibir no timezone da saída.
+- Complexidade das RLS com dois papéis + níveis de guia — mitigado por funções security definer e testes de acesso cruzado.
+- FKs compostas exigem chaves únicas em todos os pais — modelar desde a primeira migration para evitar retrabalho.
+- Fusos por atividade: risco de exibir horário errado — armazenar `timestamptz` + timezone IANA e formatar sempre com o fuso da atividade.
+- Token por hash: link só é exibido uma vez; garantir cópia/reenvio gerando novo token e revogando o anterior.
+- Normalização de telefones e duplicatas na importação — validação e pré-visualização antes de gravar.
+- Divergência entre prévia e templates oficiais aprovados — modelar mensagem como template com variáveis desde já.
 
-## 17. Perguntas em aberto
-1. Quem cria o primeiro admin da WTT — posso deixar uma rota de setup inicial protegida por senha única?
-2. Uma saída pode ter mais de um guia atuando simultaneamente (guia líder + auxiliar)?
-3. O aviso é sempre vinculado a uma atividade do roteiro, ou também existe aviso livre?
-4. Os passageiros podem responder mais de uma vez (ex.: "a caminho" depois "no ponto") — mantenho histórico e status atual?
-5. O controle de presença é sempre criado a partir de uma atividade do roteiro, ou o guia pode abrir um ad hoc?
+## 17. Perguntas restantes (não bloqueiam a Fase 1)
+1. Prazo padrão de validade do link de resposta (ex. 24h ou até o fim da atividade)?
+2. Guia auxiliar pode abrir controle de presença ou apenas acompanhar um já aberto? (Plano atual: pode abrir.)
+3. Ao corrigir um aviso publicado, o novo aviso deve reenviar link a todos ou apenas a quem ainda não confirmou?
