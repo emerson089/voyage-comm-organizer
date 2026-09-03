@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle2 } from "lucide-react";
+import { useDemoStore } from "@/lib/demo-store";
 import { toast } from "sonner";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { DEMO_TODAY } from "@/lib/demo-data";
+import { DEMO_TODAY, DEMO_REVIEW_CHECKS } from "@/lib/demo-data";
 
 export const Route = createFileRoute("/roteiro")({
   head: () => ({
@@ -18,16 +18,11 @@ export const Route = createFileRoute("/roteiro")({
   component: RoteiroPage,
 });
 
-const CHECKS = [
-  "Horários das atividades conferem com o fuso local",
-  "Pontos de encontro preenchidos e corretos",
-  "Passeio de barco confirmado às 9h30",
-  "Ingressos do Museu Van Gogh garantidos para o grupo",
-  "Transfer para Bruxelas amanhã confirmado",
-];
-
 function RoteiroPage() {
+  const { reviewedChecks, toggleReviewCheck, ready } = useDemoStore();
+  const complete = reviewedChecks.length === DEMO_REVIEW_CHECKS.length;
   function confirmar() {
+    if (!ready || !complete) return;
     toast.success("Programação revisada", {
       description: "Tudo conferido para a saída em Amsterdã.",
     });
@@ -45,11 +40,23 @@ function RoteiroPage() {
       </section>
 
       <ul className="mb-5 space-y-2.5">
-        {CHECKS.map((c) => (
+        {DEMO_REVIEW_CHECKS.map((c, index) => (
           <li key={c}>
-            <Card className="flex items-start gap-3 p-3.5 shadow-card">
-              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-onsite" />
-              <span className="text-sm font-medium text-foreground">{c}</span>
+            <Card className="shadow-card">
+              <label
+                htmlFor={`review-${index}`}
+                className="flex min-h-11 cursor-pointer items-start gap-3 p-3.5"
+              >
+                <input
+                  id={`review-${index}`}
+                  type="checkbox"
+                  disabled={!ready}
+                  checked={reviewedChecks.includes(c)}
+                  onChange={() => toggleReviewCheck(c)}
+                  className="mt-0.5 h-5 w-5 shrink-0 accent-primary"
+                />
+                <span className="text-sm font-medium text-foreground">{c}</span>
+              </label>
             </Card>
           </li>
         ))}
@@ -64,7 +71,7 @@ function RoteiroPage() {
             <li key={item.id}>
               <Card className="flex items-center justify-between gap-2 p-3 shadow-card">
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-foreground">{item.title}</p>
+                  <p className="break-words text-sm font-semibold text-foreground">{item.title}</p>
                   <p className="text-xs text-muted-foreground">{item.meetingPoint ?? item.city}</p>
                 </div>
                 <span className="shrink-0 text-sm font-semibold text-primary">{item.time}</span>
@@ -74,7 +81,15 @@ function RoteiroPage() {
         </ol>
       </section>
 
-      <Button onClick={confirmar} className="h-11 w-full bg-primary text-primary-foreground">
+      <p role="status" className="mb-3 text-sm text-muted-foreground">
+        {reviewedChecks.length} de {DEMO_REVIEW_CHECKS.length} itens conferidos. Marque todos para
+        confirmar.
+      </p>
+      <Button
+        disabled={!ready || !complete}
+        onClick={confirmar}
+        className="h-11 w-full bg-primary text-primary-foreground"
+      >
         Confirmar revisão
       </Button>
     </AppShell>

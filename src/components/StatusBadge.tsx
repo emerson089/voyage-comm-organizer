@@ -37,11 +37,13 @@ export function PresenceBadge({ state, className }: { state: PresenceState; clas
 }
 
 export function PresenceDot({ state, className }: { state: PresenceState; className?: string }) {
-  return <span className={cn("inline-block h-2.5 w-2.5 rounded-full", presenceDot[state], className)} />;
+  return (
+    <span className={cn("inline-block h-2.5 w-2.5 rounded-full", presenceDot[state], className)} />
+  );
 }
 
 const typeStyles: Record<AnnouncementType, string> = {
-  information: "bg-primary/10 text-primary border-primary/20",
+  information: "bg-secondary text-primary border-primary/20",
   reminder: "bg-enroute-soft text-enroute border-enroute/30",
   schedule_change: "bg-wine-soft text-wine border-wine/30",
   important: "bg-help-soft text-help border-help/30",

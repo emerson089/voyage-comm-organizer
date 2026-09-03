@@ -3,6 +3,8 @@ import { Megaphone, Plus, CheckCheck, Clock3 } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
 import { AnnouncementTypeBadge, AnnouncementStatusBadge } from "@/components/StatusBadge";
+import { DEMO_PUBLIC_PASSENGER_ID } from "@/lib/demo-data";
+import { demoAnnouncementReference } from "@/lib/demo-state";
 import { useDemoStore } from "@/lib/demo-store";
 
 export const Route = createFileRoute("/avisos/")({
@@ -44,8 +46,17 @@ function AvisosIndexPage() {
                     <Clock3 className="h-3 w-3" /> {a.createdAt}
                   </span>
                 </div>
-                <p className="mt-2.5 font-semibold text-foreground">{a.title}</p>
-                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{a.body}</p>
+                <p className="mt-2.5 break-words [overflow-wrap:anywhere] font-semibold text-foreground">
+                  {a.title}
+                </p>
+                <details className="mt-1">
+                  <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-primary">
+                    Ver mensagem completa
+                  </summary>
+                  <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm text-muted-foreground">
+                    {a.body}
+                  </p>
+                </details>
 
                 {a.linkedActivity && (
                   <p className="mt-2 text-xs font-medium text-primary">
@@ -53,6 +64,13 @@ function AvisosIndexPage() {
                   </p>
                 )}
 
+                <Link
+                  to="/r/$token"
+                  params={{ token: demoAnnouncementReference(a.id, DEMO_PUBLIC_PASSENGER_ID) }}
+                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+                >
+                  Abrir resposta simulada
+                </Link>
                 <div className="mt-3">
                   <div className="flex items-center justify-between text-xs">
                     <span className="inline-flex items-center gap-1 font-medium text-muted-foreground">
