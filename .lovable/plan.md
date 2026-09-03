@@ -94,13 +94,13 @@ Funções security definer: `has_role(uid, role)`, `current_org_id()`, `is_guide
 Políticas separadas por operação, sempre `TO authenticated`:
 - **Admin** (`has_role(auth.uid(),'admin') and organization_id = current_org_id()`): SELECT/INSERT/UPDATE/DELETE em todas as tabelas de negócio.
 - **Guia (lead e assistant)**: SELECT em `trips`/`departures`/`departure_passengers`/`passengers` (via saída)/`meeting_points`/`itinerary_*`/`announcements`/`announcement_recipients`/`announcement_responses`/`checkin_*` restrito por `is_guide_of_departure`. Sem DELETE em cadastros.
-- **Guia lead**: INSERT/UPDATE em `announcements` (incluindo publicar) e `itinerary_items` da sua saída; UPDATE de `announcements` só enquanto `draft` (imutabilidade garantida por trigger).
-- **Guia assistant**: INSERT/UPDATE de `announcements` apenas com `status = 'draft'`; INSERT em `checkin_sessions`, `checkin_response_events` e `announcement_responses` (source manual) da sua saída.
+- **Guia lead**: INSERT/UPDATE em `announcements` (incluindo publicar e publicar correção) e em `itinerary_items`/`meeting_points` da sua saída; UPDATE de `announcements` só enquanto `draft`.
+- **Guia assistant**: INSERT/UPDATE de `announcements` apenas com `status = 'draft'`; INSERT/UPDATE em `checkin_sessions` (abrir e encerrar), INSERT em `checkin_response_events` e `announcement_responses` (source manual) da sua saída; sem UPDATE em `itinerary_items` e `meeting_points`.
 - `profiles`: cada um lê/atualiza o próprio; admin lê/edita todos da org.
 - `user_roles`: SELECT para autenticados da org; escrita apenas por server function admin.
-- `announcement_recipients.token_hash`: nunca projetado para o cliente — leituras do painel usam view/colunas seguras.
+- `public_response_tokens`: **nenhuma policy para o cliente** — leitura/escrita apenas server-side; o painel nunca projeta `token_hash`. Reenvio gera novo token e revoga o anterior.
 - `audit_logs`, `message_deliveries`: SELECT admin; INSERT apenas server-side.
-- Passageiro (`anon`): **sem policy alguma**. `/r/$token` resolve via server function que confere hash, validade, revogação e grava a resposta.
+- Passageiro (`anon`): **sem policy alguma**. `/r/$token` resolve via server function que confere hash, propósito, validade, revogação e estado da sessão antes de gravar a resposta.
 
 ## 9. Rotas e telas
 Públicas: `/` (login), `/r/$token` (resposta do passageiro), `/convite` (definir senha).
