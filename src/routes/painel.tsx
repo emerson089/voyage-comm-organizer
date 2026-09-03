@@ -151,7 +151,7 @@ function PainelPage() {
               <Megaphone className="h-3.5 w-3.5" /> {lastAnnouncement.createdAt}
             </div>
             <p className="font-semibold text-foreground">{lastAnnouncement.title}</p>
-            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{lastAnnouncement.body}</p>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{lastAnnouncement.body}</p>
             <Link
               to="/avisos/novo"
               className="mt-3 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-wine px-3 text-sm font-semibold text-wine-foreground"
