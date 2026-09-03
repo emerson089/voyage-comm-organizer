@@ -5,11 +5,7 @@ export type CheckinState = "a_caminho" | "no_ponto" | "preciso_ajuda";
 // "sem_resposta" nunca é gravado como evento — é o estado calculado inicial.
 export type PresenceState = CheckinState | "sem_resposta";
 
-export type AnnouncementType =
-  | "information"
-  | "reminder"
-  | "schedule_change"
-  | "important";
+export type AnnouncementType = "information" | "reminder" | "schedule_change" | "important";
 
 export type AnnouncementStatus = "draft" | "published" | "superseded";
 
@@ -156,31 +152,164 @@ export const DEMO_TOMORROW: ItineraryItem[] = [
 
 // 18 passageiros: 12 no_ponto, 3 a_caminho, 1 preciso_ajuda, 2 sem_resposta.
 export const DEMO_PASSENGERS: Passenger[] = [
-  { id: "p1", name: "Ana Beatriz Souza", group: "Grupo A", phone: "+55 11 98888-1001", presence: "no_ponto", lastEventTime: "08:51" },
-  { id: "p2", name: "Bruno Carvalho", group: "Grupo A", phone: "+55 11 98888-1002", presence: "no_ponto", lastEventTime: "08:48" },
-  { id: "p3", name: "Camila Ferreira", group: "Grupo A", phone: "+55 11 98888-1003", presence: "no_ponto", lastEventTime: "08:50" },
-  { id: "p4", name: "Diego Martins", group: "Grupo B", phone: "+55 21 97777-1004", presence: "no_ponto", lastEventTime: "08:47" },
-  { id: "p5", name: "Eduarda Lima", group: "Grupo B", phone: "+55 21 97777-1005", presence: "no_ponto", lastEventTime: "08:52" },
-  { id: "p6", name: "Felipe Andrade", group: "Grupo B", phone: "+55 21 97777-1006", presence: "no_ponto", lastEventTime: "08:46" },
-  { id: "p7", name: "Gabriela Rocha", group: "Grupo C", phone: "+55 31 96666-1007", presence: "no_ponto", lastEventTime: "08:49" },
-  { id: "p8", name: "Henrique Alves", group: "Grupo C", phone: "+55 31 96666-1008", presence: "no_ponto", lastEventTime: "08:50" },
-  { id: "p9", name: "Isabela Mendes", group: "Grupo C", phone: "+55 31 96666-1009", presence: "no_ponto", lastEventTime: "08:53" },
-  { id: "p10", name: "João Pedro Nunes", group: "Grupo D", phone: "+55 41 95555-1010", presence: "no_ponto", lastEventTime: "08:45" },
-  { id: "p11", name: "Larissa Gomes", group: "Grupo D", phone: "+55 41 95555-1011", presence: "no_ponto", lastEventTime: "08:52" },
-  { id: "p12", name: "Marcelo Pinto", group: "Grupo D", phone: "+55 41 95555-1012", presence: "no_ponto", lastEventTime: "08:54" },
-  { id: "p13", name: "Natália Ribeiro", group: "Grupo A", phone: "+55 11 98888-1013", presence: "a_caminho", lastEventTime: "08:50" },
-  { id: "p14", name: "Otávio Barbosa", group: "Grupo B", phone: "+55 21 97777-1014", presence: "a_caminho", lastEventTime: "08:42" },
-  { id: "p15", name: "Patrícia Cardoso", group: "Grupo C", phone: "+55 31 96666-1015", presence: "a_caminho", lastEventTime: "08:38" },
-  { id: "p16", name: "Rafael Teixeira", group: "Grupo D", phone: "+55 41 95555-1016", presence: "preciso_ajuda", lastEventTime: "08:44", needsAttention: true },
-  { id: "p17", name: "Sofia Nogueira", group: "Grupo A", phone: "+55 11 98888-1017", presence: "sem_resposta" },
-  { id: "p18", name: "Thiago Moreira", group: "Grupo B", phone: "+55 21 97777-1018", presence: "sem_resposta" },
+  {
+    id: "p1",
+    name: "Ana Beatriz Souza",
+    group: "Grupo A",
+    phone: "+55 11 98888-1001",
+    presence: "no_ponto",
+    lastEventTime: "08:51",
+  },
+  {
+    id: "p2",
+    name: "Bruno Carvalho",
+    group: "Grupo A",
+    phone: "+55 11 98888-1002",
+    presence: "no_ponto",
+    lastEventTime: "08:48",
+  },
+  {
+    id: "p3",
+    name: "Camila Ferreira",
+    group: "Grupo A",
+    phone: "+55 11 98888-1003",
+    presence: "no_ponto",
+    lastEventTime: "08:50",
+  },
+  {
+    id: "p4",
+    name: "Diego Martins",
+    group: "Grupo B",
+    phone: "+55 21 97777-1004",
+    presence: "no_ponto",
+    lastEventTime: "08:47",
+  },
+  {
+    id: "p5",
+    name: "Eduarda Lima",
+    group: "Grupo B",
+    phone: "+55 21 97777-1005",
+    presence: "no_ponto",
+    lastEventTime: "08:52",
+  },
+  {
+    id: "p6",
+    name: "Felipe Andrade",
+    group: "Grupo B",
+    phone: "+55 21 97777-1006",
+    presence: "no_ponto",
+    lastEventTime: "08:46",
+  },
+  {
+    id: "p7",
+    name: "Gabriela Rocha",
+    group: "Grupo C",
+    phone: "+55 31 96666-1007",
+    presence: "no_ponto",
+    lastEventTime: "08:49",
+  },
+  {
+    id: "p8",
+    name: "Henrique Alves",
+    group: "Grupo C",
+    phone: "+55 31 96666-1008",
+    presence: "no_ponto",
+    lastEventTime: "08:50",
+  },
+  {
+    id: "p9",
+    name: "Isabela Mendes",
+    group: "Grupo C",
+    phone: "+55 31 96666-1009",
+    presence: "no_ponto",
+    lastEventTime: "08:53",
+  },
+  {
+    id: "p10",
+    name: "João Pedro Nunes",
+    group: "Grupo D",
+    phone: "+55 41 95555-1010",
+    presence: "no_ponto",
+    lastEventTime: "08:45",
+  },
+  {
+    id: "p11",
+    name: "Larissa Gomes",
+    group: "Grupo D",
+    phone: "+55 41 95555-1011",
+    presence: "no_ponto",
+    lastEventTime: "08:52",
+  },
+  {
+    id: "p12",
+    name: "Marcelo Pinto",
+    group: "Grupo D",
+    phone: "+55 41 95555-1012",
+    presence: "no_ponto",
+    lastEventTime: "08:54",
+  },
+  {
+    id: "p13",
+    name: "Natália Ribeiro",
+    group: "Grupo A",
+    phone: "+55 11 98888-1013",
+    presence: "a_caminho",
+    lastEventTime: "08:50",
+  },
+  {
+    id: "p14",
+    name: "Otávio Barbosa",
+    group: "Grupo B",
+    phone: "+55 21 97777-1014",
+    presence: "a_caminho",
+    lastEventTime: "08:42",
+  },
+  {
+    id: "p15",
+    name: "Patrícia Cardoso",
+    group: "Grupo C",
+    phone: "+55 31 96666-1015",
+    presence: "a_caminho",
+    lastEventTime: "08:38",
+  },
+  {
+    id: "p16",
+    name: "Rafael Teixeira",
+    group: "Grupo D",
+    phone: "+55 41 95555-1016",
+    presence: "preciso_ajuda",
+    lastEventTime: "08:44",
+    needsAttention: true,
+  },
+  {
+    id: "p17",
+    name: "Sofia Nogueira",
+    group: "Grupo A",
+    phone: "+55 11 98888-1017",
+    presence: "sem_resposta",
+  },
+  {
+    id: "p18",
+    name: "Thiago Moreira",
+    group: "Grupo B",
+    phone: "+55 21 97777-1018",
+    presence: "sem_resposta",
+  },
 ];
 
-export const DEMO_PRESENCE_EVENTS: PresenceEvent[] = [
-  { id: "e1", passengerId: "p14", state: "a_caminho", source: "public_link", time: "08:20" },
-  { id: "e2", passengerId: "p14", state: "no_ponto", source: "public_link", time: "08:42" },
-  { id: "e3", passengerId: "p16", state: "preciso_ajuda", source: "public_link", time: "08:44", reason: "Se perdeu perto da doca" },
-];
+export const DEMO_PRESENCE_EVENTS: PresenceEvent[] = DEMO_PASSENGERS.flatMap((passenger) => {
+  if (passenger.presence === "sem_resposta") return [];
+  return [
+    {
+      id: `initial-${passenger.id}`,
+      passengerId: passenger.id,
+      state: passenger.presence,
+      source: "public_link" as const,
+      time: passenger.lastEventTime!,
+      ...(passenger.presence === "preciso_ajuda" ? { reason: "Se perdeu perto da doca" } : {}),
+    },
+  ];
+});
 
 export const DEMO_ANNOUNCEMENTS: Announcement[] = [
   {
@@ -237,6 +366,15 @@ export const PRESENCE_LABEL: Record<PresenceState, string> = {
 // Tokens demonstrativos — apenas para a página pública simulada decidir o propósito.
 export const DEMO_TOKEN_AVISO = "demo-aviso";
 export const DEMO_TOKEN_PRESENCA = "demo-presenca";
+export const DEMO_PUBLIC_PASSENGER_ID = "p17";
+
+export const DEMO_REVIEW_CHECKS = [
+  "Horários das atividades conferem com o fuso local",
+  "Pontos de encontro preenchidos e corretos",
+  "Passeio de barco confirmado às 9h30",
+  "Ingressos do Museu Van Gogh garantidos para o grupo",
+  "Transfer para Bruxelas amanhã confirmado",
+];
 
 export function presenceCounts(passengers: Passenger[]) {
   const counts = { no_ponto: 0, a_caminho: 0, preciso_ajuda: 0, sem_resposta: 0 };

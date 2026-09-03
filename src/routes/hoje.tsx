@@ -2,11 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CheckCircle2, Clock, MapPin, CalendarDays } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
 import { Card } from "@/components/ui/card";
-import {
-  DEMO_TODAY,
-  DEMO_TOMORROW,
-  DEMO_NEXT_MEETING,
-} from "@/lib/demo-data";
+import { DEMO_TODAY, DEMO_TOMORROW, DEMO_NEXT_MEETING } from "@/lib/demo-data";
 
 export const Route = createFileRoute("/hoje")({
   head: () => ({
@@ -26,7 +22,7 @@ function HojePage() {
       <section className="mb-5">
         <Link
           to="/roteiro"
-          className="mb-4 inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
+          className="mb-4 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-primary text-sm font-semibold text-primary-foreground"
         >
           <CheckCircle2 className="h-4 w-4" /> Revisar programação completa
         </Link>

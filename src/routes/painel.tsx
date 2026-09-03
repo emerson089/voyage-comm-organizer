@@ -11,11 +11,7 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { PresenceBadge } from "@/components/StatusBadge";
 import { useDemoStore } from "@/lib/demo-store";
-import {
-  DEMO_NEXT_MEETING,
-  DEMO_TRIP,
-  presenceCounts,
-} from "@/lib/demo-data";
+import { DEMO_NEXT_MEETING, DEMO_TRIP, presenceCounts } from "@/lib/demo-data";
 import { Card } from "@/components/ui/card";
 
 export const Route = createFileRoute("/painel")({
@@ -53,7 +49,8 @@ function PainelPage() {
               <CalendarDays className="h-4 w-4 text-primary-foreground/60" /> Hoje, {DEMO_TRIP.city}
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Users className="h-4 w-4 text-primary-foreground/60" /> {DEMO_NEXT_MEETING.passengersTotal} passageiros
+              <Users className="h-4 w-4 text-primary-foreground/60" />{" "}
+              {DEMO_NEXT_MEETING.passengersTotal} passageiros
             </span>
           </div>
         </Card>
@@ -79,13 +76,13 @@ function PainelPage() {
           <div className="mt-4 grid grid-cols-2 gap-2">
             <Link
               to="/hoje"
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-secondary text-sm font-semibold text-secondary-foreground transition-colors hover:bg-accent"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-secondary text-sm font-semibold text-secondary-foreground transition-colors hover:bg-accent"
             >
               <CalendarDays className="h-4 w-4" /> Revisar programação
             </Link>
             <Link
               to="/presenca"
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-primary text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90"
             >
               <MapPin className="h-4 w-4" /> Controle de presença
             </Link>
@@ -97,7 +94,10 @@ function PainelPage() {
       <section className="mb-4">
         <div className="mb-2 flex items-center justify-between">
           <h2 className="font-display text-base font-bold">Resumo de presença</h2>
-          <Link to="/presenca" className="text-xs font-semibold text-primary">
+          <Link
+            to="/presenca"
+            className="inline-flex min-h-11 items-center px-2 text-xs font-semibold text-primary"
+          >
             Ver tudo
           </Link>
         </div>
@@ -129,7 +129,7 @@ function PainelPage() {
             </ul>
             <Link
               to="/presenca"
-              className="mt-3 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-help px-3 text-sm font-semibold text-help-foreground"
+              className="mt-3 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-help px-3 text-sm font-semibold text-wine-foreground"
             >
               Atender <ArrowRight className="h-4 w-4" />
             </Link>
@@ -142,7 +142,10 @@ function PainelPage() {
         <section className="mb-2">
           <div className="mb-2 flex items-center justify-between">
             <h2 className="font-display text-base font-bold">Último aviso</h2>
-            <Link to="/avisos" className="text-xs font-semibold text-primary">
+            <Link
+              to="/avisos"
+              className="inline-flex min-h-11 items-center px-2 text-xs font-semibold text-primary"
+            >
               Histórico
             </Link>
           </div>
@@ -150,11 +153,15 @@ function PainelPage() {
             <div className="mb-1.5 flex items-center gap-2 text-xs text-muted-foreground">
               <Megaphone className="h-3.5 w-3.5" /> {lastAnnouncement.createdAt}
             </div>
-            <p className="font-semibold text-foreground">{lastAnnouncement.title}</p>
-            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{lastAnnouncement.body}</p>
+            <p className="break-words [overflow-wrap:anywhere] font-semibold text-foreground">
+              {lastAnnouncement.title}
+            </p>
+            <p className="mt-1 break-words [overflow-wrap:anywhere] text-sm leading-relaxed text-muted-foreground">
+              {lastAnnouncement.body}
+            </p>
             <Link
               to="/avisos/novo"
-              className="mt-3 inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-wine px-3 text-sm font-semibold text-wine-foreground"
+              className="mt-3 inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-wine px-3 text-sm font-semibold text-wine-foreground"
             >
               Publicar novo aviso
             </Link>

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Compass, Lock } from "lucide-react";
 import { useDemoStore } from "@/lib/demo-store";
@@ -10,7 +10,10 @@ export const Route = createFileRoute("/")({
       { title: "Entrar — WTT Companion" },
       { name: "description", content: "Acesso do guia ao painel operacional WTT Companion." },
       { property: "og:title", content: "Entrar — WTT Companion" },
-      { property: "og:description", content: "Acesso do guia ao painel operacional WTT Companion." },
+      {
+        property: "og:description",
+        content: "Acesso do guia ao painel operacional WTT Companion.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -19,7 +22,7 @@ export const Route = createFileRoute("/")({
 });
 
 function LoginPage() {
-  const { signIn } = useDemoStore();
+  const { signIn, ready } = useDemoStore();
   const navigate = useNavigate();
   const [email, setEmail] = useState("marina@wtt.com.br");
   const [password, setPassword] = useState("••••••••");
@@ -38,29 +41,40 @@ function LoginPage() {
             <Compass className="h-7 w-7" />
           </div>
           <h1 className="font-display text-2xl font-bold text-primary-foreground">WTT Companion</h1>
-          <p className="mt-1 text-sm text-primary-foreground/70">
-            Painel operacional do guia
-          </p>
+          <p className="mt-1 text-sm text-primary-foreground/70">Painel operacional do guia</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
           className="rounded-2xl border border-border bg-card p-5 shadow-card"
         >
-          <p className="mb-4 text-xs font-medium text-muted-foreground">
-            {DEMO_TRIP.name}
-          </p>
+          <p className="mb-4 text-xs font-medium text-muted-foreground">{DEMO_TRIP.name}</p>
 
-          <label className="mb-1.5 block text-sm font-medium text-foreground">E-mail</label>
+          <label htmlFor="login-email" className="mb-1.5 block text-sm font-medium text-foreground">
+            E-mail
+          </label>
           <input
+            id="login-email"
+            name="email"
+            autoComplete="username"
+            disabled={!ready}
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="mb-4 h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
           />
 
-          <label className="mb-1.5 block text-sm font-medium text-foreground">Senha</label>
+          <label
+            htmlFor="login-password"
+            className="mb-1.5 block text-sm font-medium text-foreground"
+          >
+            Senha
+          </label>
           <input
+            id="login-password"
+            name="password"
+            autoComplete="current-password"
+            disabled={!ready}
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
@@ -69,10 +83,11 @@ function LoginPage() {
 
           <button
             type="submit"
+            disabled={!ready}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-wine font-semibold text-wine-foreground transition-colors hover:opacity-90"
           >
             <Lock className="h-4 w-4" />
-            Entrar
+            {ready ? "Entrar" : "Carregando demonstração…"}
           </button>
 
           <p className="mt-4 text-center text-xs text-muted-foreground">

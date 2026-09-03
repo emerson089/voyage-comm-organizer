@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
 import {
   CheckCheck,
   Clock,
@@ -17,9 +16,8 @@ import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  DEMO_ANNOUNCEMENTS,
   DEMO_NEXT_MEETING,
-  DEMO_TOKEN_AVISO,
+  DEMO_PUBLIC_PASSENGER_ID,
   DEMO_TOKEN_PRESENCA,
   PRESENCE_LABEL,
   type CheckinState,
@@ -41,16 +39,18 @@ export const Route = createFileRoute("/r/$token")({
 
 function PublicResponsePage() {
   const { token } = Route.useParams();
-  const isAviso = token === DEMO_TOKEN_AVISO;
+  const { resolveAnnouncement } = useDemoStore();
+  const isAviso = !!resolveAnnouncement(token);
   const isPresenca = token === DEMO_TOKEN_PRESENCA;
 
   if (!isAviso && !isPresenca) {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4">
         <Card className="max-w-sm p-6 text-center shadow-card">
-          <p className="font-display text-lg font-bold">Link inválido ou expirado</p>
+          <p className="font-display text-lg font-bold">Link inválido ou indisponível</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Este link não é mais válido. Solicite um novo ao guia.
+            Abra a referência pelo histórico de avisos nesta mesma aba. Ao recarregar, a
+            demonstração é reiniciada.
           </p>
         </Card>
       </div>
@@ -65,7 +65,7 @@ function PublicResponsePage() {
           <span className="font-display text-sm font-bold">WTT Companion</span>
         </div>
 
-        {isAviso ? <AvisoResponse /> : <PresencaResponse />}
+        {isAviso ? <AvisoResponse reference={token} /> : <PresencaResponse />}
 
         <p className="mt-6 text-center text-[11px] text-muted-foreground">
           Demonstração — página pública simulada, sem dados reais.
@@ -75,15 +75,16 @@ function PublicResponsePage() {
   );
 }
 
-function AvisoResponse() {
-  const { confirmAnnouncement } = useDemoStore();
-  const aviso = DEMO_ANNOUNCEMENTS[0]!;
-  const [done, setDone] = useState(false);
+function AvisoResponse({ reference }: { reference: string }) {
+  const { confirmAnnouncement, resolveAnnouncement, ready } = useDemoStore();
+  const response = resolveAnnouncement(reference);
+  if (!response) return null;
+  const { announcement: aviso, passenger, confirmed: done } = response;
 
   function confirmar() {
-    confirmAnnouncement(aviso.id);
-    setDone(true);
-    toast.success("Confirmação registrada", { description: "Obrigado! O guia foi avisado." });
+    if (!ready || done) return;
+    confirmAnnouncement(aviso.id, passenger.id);
+    toast.success("Resposta registrada na demonstração");
   }
 
   return (
@@ -95,8 +96,15 @@ function AvisoResponse() {
       </div>
       <div className="space-y-3 p-4">
         <p className="text-xs text-muted-foreground">{aviso.createdAt}</p>
-        <h1 className="font-display text-lg font-bold leading-tight">{aviso.title}</h1>
-        <p className="whitespace-pre-wrap text-sm text-foreground">{aviso.body}</p>
+        <p className="text-xs text-muted-foreground">
+          {passenger.name} · passageiro da demonstração
+        </p>
+        <h1 className="break-words [overflow-wrap:anywhere] font-display text-lg font-bold leading-tight">
+          {aviso.title}
+        </h1>
+        <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] text-sm text-foreground">
+          {aviso.body}
+        </p>
         {aviso.linkedActivity && (
           <p className="inline-flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-1.5 text-xs font-medium">
             <MapPin className="h-3.5 w-3.5" /> {aviso.linkedActivity}
@@ -107,44 +115,54 @@ function AvisoResponse() {
         {done ? (
           <div className="flex items-center justify-center gap-2 rounded-lg bg-onsite-soft py-3 text-onsite">
             <ThumbsUp className="h-5 w-5" />
-            <span className="font-semibold">Confirmado — obrigado!</span>
+            <span role="status" className="font-semibold">
+              Confirmado na demonstração — obrigado!
+            </span>
           </div>
         ) : (
-          <Button className="h-12 w-full bg-primary text-primary-foreground" onClick={confirmar}>
+          <Button
+            disabled={!ready}
+            className="h-12 w-full bg-primary text-primary-foreground"
+            onClick={confirmar}
+          >
             <CheckCheck className="mr-2 h-5 w-5" /> Li e entendi
           </Button>
         )}
+      </div>
+      <div className="border-t border-border p-4">
+        <Link
+          to="/avisos"
+          className="inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+        >
+          Voltar ao histórico de avisos
+        </Link>
       </div>
     </Card>
   );
 }
 
 function PresencaResponse() {
-  const { sessionOpen, registerPublic } = useDemoStore();
-  const demoPassengerId = "p17"; // passageiro "sem resposta" para demonstrar a transição
-  const { passengerById } = useDemoStore();
+  const { sessionOpen, registerPublic, passengerById, ready } = useDemoStore();
+  const demoPassengerId = DEMO_PUBLIC_PASSENGER_ID;
   const passenger = passengerById(demoPassengerId);
-  const [current, setCurrent] = useState<CheckinState | "sem_resposta">(
-    passenger?.presence ?? "sem_resposta",
-  );
+  const current = passenger?.presence ?? "sem_resposta";
 
   function responder(state: CheckinState) {
-    if (!sessionOpen) return;
+    if (!ready || !sessionOpen) return;
     registerPublic(demoPassengerId, state);
-    setCurrent(state);
     const msg =
       state === "no_ponto"
         ? "Você marcou: já estou no ponto."
         : state === "a_caminho"
           ? "Você marcou: estou a caminho."
-          : "Você pediu ajuda. O guia foi avisado.";
-    toast.success("Resposta enviada", { description: msg });
+          : "Na versão integrada, o guia receberá este alerta.";
+    toast.success("Resposta registrada na demonstração", { description: msg });
   }
 
-  const options: { state: CheckinState; label: string; icon: typeof Hand; tone: string }[] = [
-    { state: "a_caminho", label: "Estou a caminho", icon: Footprints, tone: "enroute" },
-    { state: "no_ponto", label: "Já estou no ponto", icon: CheckCheck, tone: "onsite" },
-    { state: "preciso_ajuda", label: "Preciso de ajuda", icon: Hand, tone: "help" },
+  const options: { state: CheckinState; label: string; icon: typeof Hand }[] = [
+    { state: "a_caminho", label: "Estou a caminho", icon: Footprints },
+    { state: "no_ponto", label: "Já estou no ponto", icon: CheckCheck },
+    { state: "preciso_ajuda", label: "Preciso de ajuda", icon: Hand },
   ];
 
   return (
@@ -163,9 +181,7 @@ function PresencaResponse() {
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <MapPin className="h-4 w-4" /> {DEMO_NEXT_MEETING.place}
         </p>
-        <p className="text-xs text-muted-foreground">
-          Fuso: {DEMO_NEXT_MEETING.timezone}
-        </p>
+        <p className="text-xs text-muted-foreground">Fuso: {DEMO_NEXT_MEETING.timezone}</p>
       </div>
 
       {!sessionOpen ? (
@@ -188,6 +204,8 @@ function PresencaResponse() {
             return (
               <button
                 key={opt.state}
+                disabled={!ready || !sessionOpen}
+                aria-pressed={active}
                 onClick={() => responder(opt.state)}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-xl border px-4 py-3.5 text-left text-sm font-semibold transition-colors",
@@ -205,8 +223,10 @@ function PresencaResponse() {
 
           {current !== "sem_resposta" && (
             <p className="pt-1 text-center text-xs text-muted-foreground">
-              Situação atual: <span className="font-semibold text-foreground">{PRESENCE_LABEL[current]}</span>
-              <br />Você pode atualizar de “a caminho” para “no ponto”.
+              Situação atual:{" "}
+              <span className="font-semibold text-foreground">{PRESENCE_LABEL[current]}</span>
+              <br />
+              Você pode atualizar de “a caminho” para “no ponto”.
             </p>
           )}
         </div>
@@ -215,7 +235,7 @@ function PresencaResponse() {
       <div className="border-t border-border p-4">
         <Link
           to="/painel"
-          className="text-center text-xs font-medium text-muted-foreground hover:text-foreground"
+          className="inline-flex min-h-11 items-center text-center text-sm font-medium text-muted-foreground hover:text-foreground"
         >
           (Protótipo) ver painel do guia
         </Link>

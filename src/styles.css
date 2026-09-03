@@ -93,7 +93,7 @@
   --destructive-foreground: oklch(0.99 0.003 247);
   --onsite: oklch(0.48 0.11 158);
   --onsite-soft: oklch(0.955 0.03 158);
-  --enroute: oklch(0.55 0.13 70);
+  --enroute: oklch(0.5 0.11 70);
   --enroute-soft: oklch(0.96 0.045 80);
   --help: oklch(0.4 0.13 18);
   --help-soft: oklch(0.95 0.03 20);

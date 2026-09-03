@@ -1,10 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  Outlet,
-  createRootRouteWithContext,
-  HeadContent,
-  Scripts,
-} from "@tanstack/react-router";
+import { Outlet, createRootRouteWithContext, HeadContent, Scripts } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import appCss from "../styles.css?url";
@@ -16,9 +11,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "WTT Companion — Painel do Guia" },
-      { name: "description", content: "Central operacional para guias de viagens internacionais em grupo." },
+      {
+        name: "description",
+        content: "Central operacional para guias de viagens internacionais em grupo.",
+      },
       { property: "og:title", content: "WTT Companion — Painel do Guia" },
-      { property: "og:description", content: "Central operacional para guias de viagens internacionais em grupo." },
+      {
+        property: "og:description",
+        content: "Central operacional para guias de viagens internacionais em grupo.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

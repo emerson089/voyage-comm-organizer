@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -27,6 +27,7 @@ import { PresenceBadge } from "@/components/StatusBadge";
 import { useDemoStore } from "@/lib/demo-store";
 import {
   DEMO_NEXT_MEETING,
+  DEMO_TOKEN_PRESENCA,
   PRESENCE_LABEL,
   type CheckinState,
   type Passenger,
@@ -37,9 +38,15 @@ export const Route = createFileRoute("/presenca")({
   head: () => ({
     meta: [
       { title: "Controle de presença — WTT Companion" },
-      { name: "description", content: "Acompanhe quem está no ponto, a caminho ou precisa de ajuda." },
+      {
+        name: "description",
+        content: "Acompanhe quem está no ponto, a caminho ou precisa de ajuda.",
+      },
       { property: "og:title", content: "Controle de presença — WTT Companion" },
-      { property: "og:description", content: "Acompanhe quem está no ponto, a caminho ou precisa de ajuda." },
+      {
+        property: "og:description",
+        content: "Acompanhe quem está no ponto, a caminho ou precisa de ajuda.",
+      },
     ],
   }),
   component: PresencaPage,
@@ -57,14 +64,9 @@ const filterLabel: Record<Filter, string> = {
 };
 
 function PresencaPage() {
-  const {
-    passengers,
-    sessionOpen,
-    closeSession,
-    openSession,
-    remindPending,
-    lastReminderAt,
-  } = useDemoStore();
+  const { passengers, sessionOpen, closeSession, ready, remindPending, lastReminderAt } =
+    useDemoStore();
+  const canManage = ready && sessionOpen;
   const [filter, setFilter] = useState<Filter>("todos");
   const [selected, setSelected] = useState<Passenger | null>(null);
   const [manualState, setManualState] = useState<CheckinState | null>(null);
@@ -88,7 +90,7 @@ function PresencaPage() {
   }
 
   function salvarManual() {
-    if (!selected || !manualState) return;
+    if (!canManage || !selected || !manualState) return;
     registerManual(selected.id, manualState, reason.trim() || undefined);
     toast.success("Situação registrada", {
       description: `${selected.name}: ${PRESENCE_LABEL[manualState]}`,
@@ -99,6 +101,7 @@ function PresencaPage() {
   const { registerManual, eventsFor } = useDemoStore();
 
   function lembrarPendentes() {
+    if (!canManage) return;
     const list = remindPending();
     setReminderList(list);
     toast.info("Lembrete preparado", {
@@ -107,10 +110,11 @@ function PresencaPage() {
   }
 
   function confirmarEncerramento() {
+    if (!canManage) return;
     closeSession();
     setShowClose(false);
     toast.success("Encontro encerrado", {
-      description: "Novas respostas ficam bloqueadas.",
+      description: "Respostas, registros manuais e lembretes ficam bloqueados.",
     });
   }
 
@@ -119,7 +123,7 @@ function PresencaPage() {
       {/* Cabeçalho do encontro */}
       <Card className="mb-4 p-4 shadow-card">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+          <div className="min-w-0 break-words [overflow-wrap:anywhere]">
             <p className="text-xs font-semibold uppercase tracking-wide text-wine">Encontro</p>
             <p className="mt-0.5 font-display text-lg font-bold leading-tight">
               {DEMO_NEXT_MEETING.time} · {DEMO_NEXT_MEETING.place}
@@ -150,7 +154,7 @@ function PresencaPage() {
               <li key={p.id}>
                 <button
                   onClick={() => abrirManual(p)}
-                  className="flex w-full items-center justify-between gap-2 rounded-lg bg-card px-3 py-2 text-left"
+                  className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg bg-card px-3 py-2 text-left"
                 >
                   <span className="text-sm font-medium text-foreground">{p.name}</span>
                   <PresenceBadge state="preciso_ajuda" />
@@ -162,11 +166,31 @@ function PresencaPage() {
       )}
 
       {/* Contadores */}
-      <div className="mb-4 grid grid-cols-2 gap-2.5">
-        <StatTile icon={<CheckCircle2 className="h-4 w-4" />} label="No ponto" value={counts.no_ponto} tone="onsite" />
-        <StatTile icon={<Clock className="h-4 w-4" />} label="A caminho" value={counts.a_caminho} tone="enroute" />
-        <StatTile icon={<Hand className="h-4 w-4" />} label="Precisa de ajuda" value={counts.preciso_ajuda} tone="help" />
-        <StatTile icon={<MapPin className="h-4 w-4" />} label="Sem resposta" value={counts.sem_resposta} tone="nores" />
+      <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <StatTile
+          icon={<CheckCircle2 className="h-4 w-4" />}
+          label="No ponto"
+          value={counts.no_ponto}
+          tone="onsite"
+        />
+        <StatTile
+          icon={<Clock className="h-4 w-4" />}
+          label="A caminho"
+          value={counts.a_caminho}
+          tone="enroute"
+        />
+        <StatTile
+          icon={<Hand className="h-4 w-4" />}
+          label="Precisa de ajuda"
+          value={counts.preciso_ajuda}
+          tone="help"
+        />
+        <StatTile
+          icon={<MapPin className="h-4 w-4" />}
+          label="Sem resposta"
+          value={counts.sem_resposta}
+          tone="nores"
+        />
       </div>
 
       {/* Filtros */}
@@ -174,9 +198,10 @@ function PresencaPage() {
         {FILTERS.map((f) => (
           <button
             key={f}
+            aria-pressed={filter === f}
             onClick={() => setFilter(f)}
             className={cn(
-              "shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
+              "min-h-11 shrink-0 rounded-full border px-3 py-2 text-xs font-semibold transition-colors",
               filter === f
                 ? "border-primary bg-primary text-primary-foreground"
                 : "border-border bg-card text-muted-foreground",
@@ -188,20 +213,27 @@ function PresencaPage() {
       </div>
 
       {/* Ações */}
-      <div className="mb-4 grid grid-cols-2 gap-2.5">
-        <Button variant="outline" className="h-11" onClick={lembrarPendentes} disabled={!sessionOpen}>
+      <div className="mb-4 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+        <Button variant="outline" className="h-11" onClick={lembrarPendentes} disabled={!canManage}>
           <BellRing className="mr-2 h-4 w-4" /> Lembrar pendentes
         </Button>
-        {sessionOpen ? (
-          <Button className="h-11 bg-wine text-wine-foreground hover:opacity-90" onClick={() => setShowClose(true)}>
-            <ShieldOff className="mr-2 h-4 w-4" /> Encerrar encontro
-          </Button>
-        ) : (
-          <Button className="h-11 bg-primary text-primary-foreground" onClick={openSession}>
-            Reabrir sessão
-          </Button>
-        )}
+        <Button
+          disabled={!canManage}
+          className="h-11 bg-wine text-wine-foreground hover:opacity-90"
+          onClick={() => setShowClose(true)}
+        >
+          <ShieldOff className="mr-2 h-4 w-4" />{" "}
+          {sessionOpen ? "Encerrar encontro" : "Encontro encerrado"}
+        </Button>
       </div>
+
+      <Link
+        to="/r/$token"
+        params={{ token: DEMO_TOKEN_PRESENCA }}
+        className="mb-4 inline-flex min-h-11 items-center text-sm font-semibold text-primary"
+      >
+        Abrir página pública de presença
+      </Link>
 
       {reminderList && (
         <Card className="mb-4 border-dashed bg-muted/50 p-3.5 shadow-card">
@@ -209,7 +241,11 @@ function PresencaPage() {
             <p className="text-xs font-semibold text-muted-foreground">
               Lembrete preparado · {reminderList.length} passageiro(s)
             </p>
-            <button onClick={() => setReminderList(null)} className="text-muted-foreground">
+            <button
+              aria-label="Fechar lembrete"
+              onClick={() => setReminderList(null)}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-muted-foreground"
+            >
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -226,7 +262,9 @@ function PresencaPage() {
             </ul>
           )}
           {lastReminderAt && (
-            <p className="mt-2 text-[11px] text-muted-foreground">Último lembrete às {lastReminderAt}</p>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Último lembrete às {lastReminderAt}
+            </p>
           )}
         </Card>
       )}
@@ -237,12 +275,21 @@ function PresencaPage() {
             <ShieldOff className="h-4 w-4" /> Controle encerrado
           </p>
           <p className="mt-0.5 text-xs text-wine/80">
-            Novas respostas pelo link público seriam bloqueadas.
+            Novas respostas, registros manuais e lembretes estão bloqueados. O histórico permanece
+            disponível para consulta.
           </p>
         </Card>
       )}
 
       {/* Lista de passageiros */}
+      {filtered.length === 0 && (
+        <p
+          role="status"
+          className="rounded-xl border border-dashed border-border p-4 text-sm text-muted-foreground"
+        >
+          Nenhum passageiro neste filtro.
+        </p>
+      )}
       <ul className="space-y-2">
         {filtered.map((p) => (
           <li key={p.id}>
@@ -255,7 +302,9 @@ function PresencaPage() {
                   {p.name.charAt(0)}
                 </span>
                 <div className="min-w-0">
-                  <p className="break-words text-sm font-semibold leading-tight text-foreground">{p.name}</p>
+                  <p className="break-words text-sm font-semibold leading-tight text-foreground">
+                    {p.name}
+                  </p>
                   <p className="break-words text-xs leading-snug text-muted-foreground">
                     {p.group} {p.lastEventTime ? `· última ${p.lastEventTime}` : ""}
                   </p>
@@ -277,41 +326,61 @@ function PresencaPage() {
             </DialogDescription>
           </DialogHeader>
 
-          {/* Histórico */}
-          <div className="mb-3">
-            <p className="mb-1.5 text-xs font-semibold uppercase text-muted-foreground">Histórico</p>
-            {selected ? (
-              <HistoryList events={eventsFor(selected.id)} />
-            ) : null}
-          </div>
-
-          {/* Registro manual */}
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-              Registrar situação manualmente
-            </p>
-            <div className="grid grid-cols-3 gap-2">
-              {(["a_caminho", "no_ponto", "preciso_ajuda"] as CheckinState[]).map((s) => (
-                <button
-                  key={s}
-                  onClick={() => setManualState(s)}
-                  className={cn(
-                    "rounded-lg border px-2 py-2.5 text-xs font-semibold transition-colors",
-                    manualState === s
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-border bg-card text-foreground",
-                  )}
-                >
-                  {PRESENCE_LABEL[s]}
-                </button>
-              ))}
+          <div
+            role="region"
+            aria-label="Histórico e registro manual"
+            tabIndex={0}
+            className="min-h-0 overflow-y-auto overscroll-contain pr-1 focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            {/* Histórico */}
+            <div className="mb-3">
+              <p className="mb-1.5 text-xs font-semibold uppercase text-muted-foreground">
+                Histórico
+              </p>
+              {selected ? <HistoryList events={eventsFor(selected.id)} /> : null}
             </div>
-            <input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="Motivo (opcional)"
-              className="mt-2 h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-            />
+
+            {!sessionOpen && (
+              <p
+                role="status"
+                className="mb-3 rounded-lg bg-wine-soft p-3 text-sm font-medium text-wine"
+              >
+                Encontro encerrado. Registro manual bloqueado.
+              </p>
+            )}
+            {/* Registro manual */}
+            <fieldset disabled={!canManage} className="min-w-0 disabled:opacity-60">
+              <legend className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
+                Registrar situação manualmente
+              </legend>
+              <div className="grid grid-cols-3 gap-2">
+                {(["a_caminho", "no_ponto", "preciso_ajuda"] as CheckinState[]).map((s) => (
+                  <button
+                    key={s}
+                    aria-pressed={manualState === s}
+                    onClick={() => setManualState(s)}
+                    className={cn(
+                      "min-h-11 rounded-lg border px-2 py-2.5 text-xs font-semibold transition-colors",
+                      manualState === s
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-foreground",
+                    )}
+                  >
+                    {PRESENCE_LABEL[s]}
+                  </button>
+                ))}
+              </div>
+              <label htmlFor="manual-reason" className="mt-3 block text-sm font-medium">
+                Motivo (opcional)
+              </label>
+              <input
+                id="manual-reason"
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Motivo (opcional)"
+                className="mt-2 h-11 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+              />
+            </fieldset>
           </div>
 
           <DialogFooter>
@@ -320,7 +389,7 @@ function PresencaPage() {
             </Button>
             <Button
               className="bg-primary text-primary-foreground"
-              disabled={!manualState}
+              disabled={!canManage || !manualState}
               onClick={salvarManual}
             >
               <Plus className="mr-1.5 h-4 w-4" /> Registrar
@@ -335,15 +404,19 @@ function PresencaPage() {
           <DialogHeader>
             <DialogTitle>Encerrar encontro?</DialogTitle>
             <DialogDescription>
-              Após encerrar, novas respostas pelo link público serão bloqueadas imediatamente. Os
-              registros já feitos são preservados.
+              Após encerrar, respostas públicas, registros manuais e lembretes serão bloqueados. O
+              histórico será preservado nesta demonstração.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowClose(false)}>
               Cancelar
             </Button>
-            <Button className="bg-wine text-wine-foreground hover:opacity-90" onClick={confirmarEncerramento}>
+            <Button
+              className="bg-wine text-wine-foreground hover:opacity-90"
+              disabled={!canManage}
+              onClick={confirmarEncerramento}
+            >
               Encerrar agora
             </Button>
           </DialogFooter>
@@ -381,22 +454,30 @@ function StatTile({
   );
 }
 
-function HistoryList({ events }: { events: ReturnType<ReturnType<typeof useDemoStore>["eventsFor"]> }) {
+function HistoryList({
+  events,
+}: {
+  events: ReturnType<ReturnType<typeof useDemoStore>["eventsFor"]>;
+}) {
   if (events.length === 0) {
     return (
       <p className="rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-        Sem resposta ainda.
+        Nenhuma resposta registrada nesta demonstração.
       </p>
     );
   }
   return (
     <ul className="space-y-1.5">
       {events.map((e) => (
-        <li key={e.id} className="flex items-center justify-between rounded-lg bg-muted px-3 py-2">
-          <div className="min-w-0">
+        <li
+          key={e.id}
+          className="flex items-center justify-between gap-3 rounded-lg bg-muted px-3 py-2"
+        >
+          <div className="min-w-0 break-words [overflow-wrap:anywhere]">
             <p className="text-sm font-semibold text-foreground">{PRESENCE_LABEL[e.state]}</p>
             <p className="text-xs text-muted-foreground">
-              {e.source === "manual" ? `Manual · ${e.recordedBy}` : "Pelo link"} {e.reason ? `· ${e.reason}` : ""}
+              {e.source === "manual" ? `Manual · ${e.recordedBy}` : "Pelo link da demonstração"}{" "}
+              {e.reason ? `· ${e.reason}` : ""}
             </p>
           </div>
           <span className="shrink-0 text-xs font-medium text-foreground">{e.time}</span>
